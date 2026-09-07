@@ -64,7 +64,7 @@ export const TOOLS: Tool[] = [
     name: "Convert",
     title: "Image and animation format converter",
     description:
-      "Convert between GIF, PNG, JPEG, WebP, animated WebP, APNG and BMP. Keeps animation where the target format supports it. Powered by ImageMagick and ffmpeg in WebAssembly.",
+      "Convert between GIF, PNG, JPEG, WebP, animated WebP, APNG and BMP, keeping animation wherever the target format supports it. ImageMagick and ffmpeg in wasm.",
     blurb: "GIF ⇄ PNG/JPEG/WebP/APNG/BMP, animation preserved.",
     category: "convert",
     engine: ["magick", "ffmpeg"],
@@ -174,7 +174,7 @@ export const TOOLS: Tool[] = [
     name: "Optimize",
     title: "GIF optimizer and compressor",
     description:
-      "Shrink an animated GIF with gifsicle: lossy compression, colour reduction, frame differencing and optional frame dropping. Compare the result against the original before downloading.",
+      "Shrink an animated GIF with gifsicle: lossy compression, colour reduction, frame differencing and optional frame dropping, compared against the original.",
     blurb: "gifsicle lossy compression and colour reduction.",
     category: "optimize",
     engine: ["gifsicle"],
