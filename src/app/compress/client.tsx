@@ -92,7 +92,10 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       <Readout
         rows={
           [
-            ["size", dims ? `${dims.w} × ${dims.h} px` : !file ? "—" : failed ? "unknown" : "reading…"],
+            [
+              "size",
+              dims ? `${dims.w} × ${dims.h} px` : !file ? "—" : failed ? "unknown" : "reading…",
+            ],
             ["format", `.${FORMATS[key].ext}`],
             ["quality", lossless ? "lossless — quality not used" : `${quality} — ${qualityWords}`],
             ["metadata", strip ? "stripped" : "kept"],

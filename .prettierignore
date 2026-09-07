@@ -1,0 +1,4 @@
+out/
+public/ffmpeg/
+public/magick/
+pnpm-lock.yaml

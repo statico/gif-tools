@@ -1,0 +1,4 @@
+# Ignore any version of a package published less than a week ago. A compromised
+# release is usually pulled within hours, so the delay is most of the protection
+# against a supply-chain attack for none of the effort.
+minimumReleaseAge: 10080

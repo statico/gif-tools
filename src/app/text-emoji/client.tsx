@@ -41,7 +41,15 @@ const PRESETS: { id: string; label: string; style: Style }[] = [
   {
     id: "caution",
     label: "caution",
-    style: { ...base, fill: "#101010", fill2: "#101010", bg: "#ffd400", transparent: false, stroke: "", strokeW: 0 },
+    style: {
+      ...base,
+      fill: "#101010",
+      fill2: "#101010",
+      bg: "#ffd400",
+      transparent: false,
+      stroke: "",
+      strokeW: 0,
+    },
   },
   {
     id: "alert",
@@ -56,7 +64,16 @@ const PRESETS: { id: string; label: string; style: Style }[] = [
   {
     id: "neon",
     label: "neon",
-    style: { ...base, fill: "#4dfff0", fill2: "#4dfff0", bg: "#0d1117", transparent: false, stroke: "", strokeW: 0, glow: true },
+    style: {
+      ...base,
+      fill: "#4dfff0",
+      fill2: "#4dfff0",
+      bg: "#0d1117",
+      transparent: false,
+      stroke: "",
+      strokeW: 0,
+      glow: true,
+    },
   },
   {
     id: "blueprint",
@@ -71,7 +88,14 @@ const PRESETS: { id: string; label: string; style: Style }[] = [
   {
     id: "sticker",
     label: "sticker",
-    style: { ...base, fill: "#ff3b6b", fill2: "#ff3b6b", stroke: "#ffffff", strokeW: 14, shadow: true },
+    style: {
+      ...base,
+      fill: "#ff3b6b",
+      fill2: "#ff3b6b",
+      stroke: "#ffffff",
+      strokeW: 14,
+      shadow: true,
+    },
   },
   {
     id: "ink",
@@ -151,8 +175,7 @@ function draw(ctx: CanvasRenderingContext2D, S: number, o: Opts, t: number) {
     };
   });
 
-  const total =
-    laid.reduce((a, l) => a + l.asc + l.desc, 0) + gap * (lines.length - 1);
+  const total = laid.reduce((a, l) => a + l.asc + l.desc, 0) + gap * (lines.length - 1);
   let y = margin + (inner - total) / 2;
 
   ctx.save();
@@ -480,7 +503,9 @@ export default function TextEmojiTool() {
       suggestedExt={format}
       hint='Slack shows emoji at about 22px, so words are stacked and stretched to fill the square — "hell yeah" becomes HELL over YEAH.'
     >
-      {(props) => <Body {...props} text={text} setText={setText} format={format} setFormat={setFormat} />}
+      {(props) => (
+        <Body {...props} text={text} setText={setText} format={format} setFormat={setFormat} />
+      )}
     </ToolShell>
   );
 }

@@ -21,7 +21,6 @@ const RATIOS: Record<string, number | null> = {
   "16:9": 16 / 9,
 };
 
-
 function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) {
   const run = useRun({ setBusy, setError, setProgress });
   const [sel, setSel] = React.useState({ x: 0, y: 0, w: 0, h: 0 });

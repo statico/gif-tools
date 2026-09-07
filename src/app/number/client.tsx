@@ -20,11 +20,31 @@ interface Style {
 }
 
 const PRESETS: { id: string; label: string; style: Style }[] = [
-  { id: "classic", label: "classic 100", style: { fill: "#dd2e44", fill2: "#dd2e44", stroke: "", glow: false } },
-  { id: "gold", label: "gold", style: { fill: "#ffd76b", fill2: "#c07a06", stroke: "#40260a", glow: false } },
-  { id: "neon", label: "neon", style: { fill: "#4dfff0", fill2: "#4dfff0", stroke: "", glow: true } },
-  { id: "outlined", label: "outlined", style: { fill: "#ffffff", fill2: "#ffffff", stroke: "#101418", glow: false } },
-  { id: "sunset", label: "gradient", style: { fill: "#ffb02e", fill2: "#ff2e88", stroke: "", glow: false } },
+  {
+    id: "classic",
+    label: "classic 100",
+    style: { fill: "#dd2e44", fill2: "#dd2e44", stroke: "", glow: false },
+  },
+  {
+    id: "gold",
+    label: "gold",
+    style: { fill: "#ffd76b", fill2: "#c07a06", stroke: "#40260a", glow: false },
+  },
+  {
+    id: "neon",
+    label: "neon",
+    style: { fill: "#4dfff0", fill2: "#4dfff0", stroke: "", glow: true },
+  },
+  {
+    id: "outlined",
+    label: "outlined",
+    style: { fill: "#ffffff", fill2: "#ffffff", stroke: "#101418", glow: false },
+  },
+  {
+    id: "sunset",
+    label: "gradient",
+    style: { fill: "#ffb02e", fill2: "#ff2e88", stroke: "", glow: false },
+  },
 ];
 
 type Underline = "none" | "single" | "double";
@@ -350,9 +370,7 @@ function Body({
       <div>
         <Label>live preview</Label>
         <div className="flex items-center gap-4 border border-border p-3">
-          <div
-            className="checkerboard shrink-0 border border-border"
-          >
+          <div className="checkerboard shrink-0 border border-border">
             <canvas
               ref={big}
               width={size}
@@ -367,7 +385,13 @@ function Body({
               className="checkerboard inline-block border border-border"
               style={{ "--checker-size": "8px" } as React.CSSProperties}
             >
-              <canvas ref={small} width={size} height={size} className="block size-[22px]" aria-hidden="true" />
+              <canvas
+                ref={small}
+                width={size}
+                height={size}
+                className="block size-[22px]"
+                aria-hidden="true"
+              />
             </div>
             <p className="text-label text-muted-foreground mt-1">actual Slack size (22px)</p>
           </div>
@@ -392,7 +416,9 @@ export default function NumberTool() {
       suggestedExt={format}
       hint="Type a number, pick a style and download it. The text auto-shrinks to fit the square, so 1000 works as well as 100."
     >
-      {(props) => <Body {...props} text={text} setText={setText} format={format} setFormat={setFormat} />}
+      {(props) => (
+        <Body {...props} text={text} setText={setText} format={format} setFormat={setFormat} />
+      )}
     </ToolShell>
   );
 }

@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import { SITE } from "./site";
 import { getTool } from "./tools";
 
-const OG_IMAGE = { url: `${SITE.url}/opengraph-image`, width: 1200, height: 630, type: "image/png" };
+const OG_IMAGE = {
+  url: `${SITE.url}/opengraph-image`,
+  width: 1200,
+  height: 630,
+  type: "image/png",
+};
 
 export function toolMetadata(slug: string): Metadata {
   const tool = getTool(slug);
@@ -90,9 +95,6 @@ export function pageJsonLd(slug: string, name: string, description: string, extr
 
 export function JsonLd({ data }: { data: unknown }) {
   return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
-    />
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }} />
   );
 }

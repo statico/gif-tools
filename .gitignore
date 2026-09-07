@@ -8,6 +8,6 @@ test-results/
 playwright-report/
 public/ffmpeg/
 public/magick/
-.npmrc
 shots/
 .playwright-mcp/
+.wrangler/

@@ -17,13 +17,11 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <>
-      <JsonLd
-        data={pageJsonLd("history", "Your history", metadata.description as string)}
-      />
+      <JsonLd data={pageJsonLd("history", "Your history", metadata.description as string)} />
       <h1 className="text-heading text-foreground tracking-tight mb-1.5">Your history</h1>
       <p className="text-sm text-muted-foreground max-w-3xl mb-5">
-        The last 60 things you made, stored in this browser and nowhere else. Clearing your
-        site data clears this list, and it does not follow you to other devices.
+        The last 60 things you made, stored in this browser and nowhere else. Clearing your site
+        data clears this list, and it does not follow you to other devices.
       </p>
       <h2 className="text-label text-muted-foreground tracking-[1.5px] uppercase mb-2">
         Saved results
@@ -34,9 +32,9 @@ export default function Page() {
         Where this is stored
       </h2>
       <p className="text-sm text-muted-foreground max-w-3xl">
-        The index lives in localStorage and the files themselves in IndexedDB, both under
-        this site&rsquo;s origin. Nothing is uploaded, so the list is per-browser and
-        per-device. The oldest entries are dropped once the list passes 60 items.
+        The index lives in localStorage and the files themselves in IndexedDB, both under this
+        site&rsquo;s origin. Nothing is uploaded, so the list is per-browser and per-device. The
+        oldest entries are dropped once the list passes 60 items.
       </p>
     </>
   );
