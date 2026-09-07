@@ -71,6 +71,23 @@ test("imagemagick links against the wasm32 build", async ({ page }) => {
   await expect(page.getByText(/LinkError/i)).toHaveCount(0);
 });
 
+// The only tool that emits a container rather than an image: fflate zips every
+// extracted frame, so a broken frame read shows up as a zip with no entries.
+test("split packs every frame into a downloadable ZIP", async ({ page }) => {
+  await page.goto("/split/");
+  await page.setInputFiles("#split-file", GIF);
+  await page.getByRole("button", { name: "Split into frames", exact: true }).click();
+
+  const download = page.getByRole("button", { name: /^download/i });
+  await expect(download).toBeEnabled({ timeout: 150_000 });
+  await expect(page.getByText(/frames extracted/i)).toBeVisible();
+
+  const [saved] = await Promise.all([page.waitForEvent("download"), download.click()]);
+  expect(saved.suggestedFilename()).toMatch(/\.zip$/);
+  const bytes = await fs.readFile(await saved.path());
+  expect(bytes.subarray(0, 2).toString("latin1")).toBe("PK");
+});
+
 // Regression: encodeGif used to flag palette index 0 transparent unconditionally,
 // so an opaque source got holes punched wherever its darkest colour appeared.
 // Byte 3 of each Graphic Control Extension (21 F9 04 <flags>) has the
