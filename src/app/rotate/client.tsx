@@ -1,10 +1,11 @@
 "use client";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Checkbox, Input, Label, Select } from "@/components/ui/field";
+import { Checkbox, ColorField, Input, Label, Select } from "@/components/ui/field";
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { ffmpegOnce, paletteGifArgs } from "@/lib/engines/ffmpeg";
 import { getTool } from "@/lib/tools";
+import { useFirstFrame } from "@/lib/preview";
 
 const tool = getTool("rotate");
 
@@ -25,13 +26,51 @@ const TURNS: Record<string, string> = {
   "270": "transpose=2",
 };
 
+/**
+ * Output box and clockwise angle for a source frame — the same maths ffmpeg
+ * does with rotw()/roth(), so the preview and the encode always agree.
+ */
+function rotated(w: number, h: number, deg: number) {
+  const rad = (deg * Math.PI) / 180;
+  const c = Math.abs(Math.cos(rad));
+  const s = Math.abs(Math.sin(rad));
+  return { rad, ow: Math.max(1, w * c + h * s), oh: Math.max(1, w * s + h * c) };
+}
+
 function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) {
   const run = useRun({ setBusy, setError, setProgress });
+  const { frame, size } = useFirstFrame(file);
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const [turn, setTurn] = React.useState<keyof typeof TURNS | "custom">("90");
   const [angle, setAngle] = React.useState(15);
   const [bg, setBg] = React.useState("#000000");
   const [hflip, setHflip] = React.useState(false);
   const [vflip, setVflip] = React.useState(false);
+
+  const deg = turn === "custom" ? (Number.isFinite(angle) ? angle : 0) : Number(turn);
+
+  // Live preview: same rotate-then-flip order the filter chain below uses.
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx || !frame || !size) return;
+    const { rad, ow, oh } = rotated(size.w, size.h, deg);
+    // Cap the backing store; a 4K frame does not need 4K of preview.
+    const k = Math.min(1, 480 / Math.max(ow, oh));
+    canvas.width = Math.max(1, Math.round(ow * k));
+    canvas.height = Math.max(1, Math.round(oh * k));
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (turn === "custom" && HEX.test(bg)) {
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.scale(k * (hflip ? -1 : 1), k * (vflip ? -1 : 1));
+    ctx.rotate(rad);
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(frame, -size.w / 2, -size.h / 2, size.w, size.h);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  }, [frame, size, deg, turn, bg, hflip, vflip]);
 
   const go = () =>
     run("Rotating", async () => {
@@ -52,8 +91,10 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       if (vflip) parts.push("vflip");
       if (parts.length === 0) throw new Error("Pick a rotation or a flip — nothing to do yet.");
 
-      const filters = parts.join(",");
       const ext = outputExt(file);
+      // x264/VP9 reject odd dimensions, and rotw()/roth() round to whatever.
+      if (ext === "mp4" || ext === "webm") parts.push("scale=trunc(iw/2)*2:trunc(ih/2)*2");
+      const filters = parts.join(",");
       const srcExt = file.name.split(".").pop()?.toLowerCase() || "bin";
 
       const out = await ffmpegOnce(
@@ -111,32 +152,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       </div>
 
       {turn === "custom" ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <Label htmlFor="rotate-bg">corner background colour</Label>
-            <input
-              id="rotate-bg"
-              type="color"
-              value={HEX.test(bg) ? bg : "#000000"}
-              onChange={(e) => setBg(e.target.value)}
-              className="h-9 w-full border border-input bg-background p-1"
-            />
-          </div>
-          <div>
-            <Label htmlFor="rotate-bg-hex">background colour hex</Label>
-            <Input
-              id="rotate-bg-hex"
-              value={bg}
-              spellCheck={false}
-              onChange={(e) => setBg(e.target.value)}
-              aria-invalid={!HEX.test(bg)}
-              aria-describedby="rotate-bg-hex-hint"
-            />
-            <p id="rotate-bg-hex-hint" className="text-label text-muted-foreground mt-1">
-              Six-digit hex, for example #1a1a1a.
-            </p>
-          </div>
-        </div>
+        <ColorField id="rotate-bg" label="corner background colour" value={bg} onChange={setBg} />
       ) : null}
 
       <div className="grid gap-3">
@@ -150,6 +166,29 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
           checked={vflip}
           onChange={(e) => setVflip(e.target.checked)}
         />
+      </div>
+
+      <div>
+        <span className="text-label text-muted-foreground tracking-[1.5px] uppercase block mb-1">
+          preview
+        </span>
+        <div className="checkerboard flex items-center justify-center border border-border p-4">
+          {frame && size ? (
+            <canvas
+              ref={canvasRef}
+              role="img"
+              aria-label={`Preview rotated ${deg} degrees${hflip ? ", flipped horizontally" : ""}${vflip ? ", flipped vertically" : ""}`}
+              className="block max-h-64 max-w-full"
+            />
+          ) : (
+            <p className="text-ui text-muted-foreground py-8">Choose a file to preview.</p>
+          )}
+        </div>
+        {size ? (
+          <p className="text-ui text-muted-foreground mt-2 tabular-nums" aria-live="polite">
+            Output {rotated(size.w, size.h, deg).ow} × {rotated(size.w, size.h, deg).oh} px
+          </p>
+        ) : null}
       </div>
 
       <Button onClick={go} disabled={!file}>

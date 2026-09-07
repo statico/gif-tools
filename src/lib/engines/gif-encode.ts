@@ -32,12 +32,16 @@ export function encodeGif(
     const format = transparent ? "rgba4444" : "rgb565";
     const palette = quantize(frame.data, maxColors, { format });
     const index = applyPalette(frame.data, palette, format);
+    // quantize only emits an alpha-0 entry when the frame actually has one, and
+    // it is not necessarily index 0. Flagging index 0 blindly punches holes in an
+    // opaque image wherever its darkest colour appears.
+    const ti = transparent ? palette.findIndex((c) => c[3] === 0) : -1;
     gif.writeFrame(index, width, height, {
       palette,
       delay,
-      transparent,
-      transparentIndex: transparent ? 0 : undefined,
-      dispose: transparent ? 2 : -1,
+      transparent: ti >= 0,
+      transparentIndex: ti >= 0 ? ti : undefined,
+      dispose: ti >= 0 ? 2 : -1,
       repeat: i === 0 ? loop : undefined,
     });
   });

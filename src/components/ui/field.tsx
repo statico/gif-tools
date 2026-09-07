@@ -6,26 +6,30 @@ import { cn } from "@/lib/utils";
 export function Label({ className, ...p }: React.LabelHTMLAttributes<HTMLLabelElement>) {
   return (
     <label
-      className={cn("text-label text-muted-foreground tracking-[1.5px] uppercase block mb-1", className)}
+      className={cn(
+        "text-label text-muted-foreground tracking-[1.5px] uppercase block mb-1",
+        className,
+      )}
       {...p}
     />
   );
 }
 
-export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
-  ({ className, ...p }, ref) => (
-    <input
-      ref={ref}
-      className={cn(
-        "flex h-9 w-full border border-input bg-background px-3 py-1 text-ui text-foreground",
-        "placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2",
-        "disabled:cursor-not-allowed disabled:opacity-50 file:border-0 file:bg-transparent file:text-ui",
-        className,
-      )}
-      {...p}
-    />
-  ),
-);
+export const Input = React.forwardRef<
+  HTMLInputElement,
+  React.InputHTMLAttributes<HTMLInputElement>
+>(({ className, ...p }, ref) => (
+  <input
+    ref={ref}
+    className={cn(
+      "flex h-9 w-full border border-input bg-background px-3 py-1 text-ui text-foreground",
+      "placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2",
+      "disabled:cursor-not-allowed disabled:opacity-50 file:border-0 file:bg-transparent file:text-ui",
+      className,
+    )}
+    {...p}
+  />
+));
 Input.displayName = "Input";
 
 export const Select = React.forwardRef<
@@ -93,12 +97,7 @@ export function Checkbox({
   const id = React.useId();
   return (
     <div className="flex items-center gap-2">
-      <input
-        id={id}
-        type="checkbox"
-        className={cn("size-4 accent-primary", className)}
-        {...p}
-      />
+      <input id={id} type="checkbox" className={cn("size-4 accent-primary", className)} {...p} />
       <label htmlFor={id} className="text-ui text-foreground select-none">
         {label}
       </label>
@@ -144,5 +143,26 @@ export function ColorField({
         />
       </div>
     </div>
+  );
+}
+
+/**
+ * The "this is what you will get" panel above a tool's run button: label/value
+ * pairs derived from the same state that builds the encode arguments.
+ */
+export function Readout({ rows }: { rows: readonly (readonly [string, string])[] }) {
+  return (
+    <dl
+      aria-live="polite"
+      className="grid grid-cols-2 gap-x-6 gap-y-2 border border-input p-3"
+      style={{ gridTemplateColumns: `repeat(auto-fit, minmax(9rem, 1fr))` }}
+    >
+      {rows.map(([k, v]) => (
+        <div key={k}>
+          <dt className="text-label text-muted-foreground tracking-[1.5px] uppercase">{k}</dt>
+          <dd className="text-ui text-foreground tabular-nums">{v}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Input, Label, Range, Select } from "@/components/ui/field";
+import { ColorField, Input, Label, Range, Select } from "@/components/ui/field";
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { encodeGif, loadImage, renderFrames } from "@/lib/engines/gif-encode";
 import { getTool } from "@/lib/tools";
@@ -27,12 +27,7 @@ interface Settings {
   bg: string | null;
 }
 
-function drawFrame(
-  ctx: CanvasRenderingContext2D,
-  img: HTMLImageElement,
-  i: number,
-  s: Settings,
-) {
+function drawFrame(ctx: CanvasRenderingContext2D, img: HTMLImageElement, i: number, s: Settings) {
   const { size } = s;
   ctx.clearRect(0, 0, size, size);
   if (s.bg) {
@@ -205,29 +200,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       </div>
 
       {bgMode === "color" ? (
-        <div className="flex items-end gap-2">
-          <div className="w-24">
-            <Label htmlFor="int-color">colour</Label>
-            <Input
-              id="int-color"
-              type="color"
-              value={safeColor}
-              onChange={(e) => setColor(e.target.value)}
-              className="p-1"
-            />
-          </div>
-          <div className="flex-1 min-w-0">
-            <Label htmlFor="int-hex">hex value</Label>
-            <Input
-              id="int-hex"
-              value={color}
-              spellCheck={false}
-              pattern="#[0-9a-fA-F]{6}"
-              aria-invalid={color !== safeColor}
-              onChange={(e) => setColor(e.target.value.trim())}
-            />
-          </div>
-        </div>
+        <ColorField id="int-color" label="colour" value={color} onChange={setColor} />
       ) : null}
 
       <div>

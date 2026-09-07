@@ -2,7 +2,7 @@
 import * as React from "react";
 import { ArrowDown, ArrowUp, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input, Label, Select } from "@/components/ui/field";
+import { ColorField, Input, Label, Select } from "@/components/ui/field";
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { encodeGif, loadImage, renderFrames } from "@/lib/engines/gif-encode";
 import { getTool } from "@/lib/tools";
@@ -27,6 +27,33 @@ function placement(img: HTMLImageElement, w: number, h: number, fit: Fit) {
   const dw = iw * scale;
   const dh = ih * scale;
   return { x: (w - dw) / 2, y: (h - dh) / 2, w: dw, h: dh };
+}
+
+/** Output size: the first frame's aspect ratio at the chosen width. */
+function outputSize(frames: Frame[], width: number) {
+  const w = Math.max(16, Math.min(2000, Math.round(width)));
+  const first = frames[0]?.img;
+  const ratio = first ? (first.naturalHeight || 1) / (first.naturalWidth || 1) : 1;
+  return { w, h: Math.max(1, Math.round(w * ratio)) };
+}
+
+/** Draw one frame exactly as the encode will. Preview and export share this. */
+function drawFrame(
+  ctx: CanvasRenderingContext2D,
+  frames: Frame[],
+  i: number,
+  w: number,
+  h: number,
+  fit: Fit,
+  bg: string,
+) {
+  ctx.clearRect(0, 0, w, h);
+  if (fit === "contain") {
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+  }
+  const p = placement(frames[i].img, w, h, fit);
+  ctx.drawImage(frames[i].img, p.x, p.y, p.w, p.h);
 }
 
 function Body({ setBusy, setProgress, setError, publish }: ToolBodyProps) {
@@ -78,6 +105,32 @@ function Body({ setBusy, setProgress, setError, publish }: ToolBodyProps) {
       return next;
     });
 
+  // Loop the assembled animation at the real frame delay, so reordering a
+  // frame or changing the fit shows up immediately rather than after an encode.
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const { w: outW, h: outH } = outputSize(frames, width);
+  React.useEffect(() => {
+    const ctx = canvasRef.current?.getContext("2d");
+    if (!ctx || !frames.length) return;
+    let i = 0;
+    const paint = () => drawFrame(ctx, frames, i % frames.length, outW, outH, fit, bg);
+    paint();
+    if (frames.length === 1) return;
+    const id = setInterval(
+      () => {
+        i += 1;
+        paint();
+      },
+      Math.max(20, Math.round(delay)),
+    );
+    return () => clearInterval(id);
+  }, [frames, outW, outH, fit, bg, delay]);
+
+  // Unmounting must release every object URL; individual deletes only cover one.
+  const framesRef = React.useRef(frames);
+  framesRef.current = frames;
+  React.useEffect(() => () => framesRef.current.forEach((f) => URL.revokeObjectURL(f.url)), []);
+
   const remove = (i: number) =>
     setFrames((prev) => {
       URL.revokeObjectURL(prev[i].url);
@@ -87,21 +140,13 @@ function Body({ setBusy, setProgress, setError, publish }: ToolBodyProps) {
   const go = () =>
     run("Building GIF", async () => {
       if (!frames.length) throw new Error("Add at least one image first.");
-      const w = Math.max(16, Math.min(2000, Math.round(width)));
-      const first = frames[0].img;
-      const ratio = (first.naturalHeight || 1) / (first.naturalWidth || 1);
-      const h = Math.max(1, Math.round(w * ratio));
+      const { w, h } = outputSize(frames, width);
       const ms = Math.max(20, Math.round(delay));
 
       setProgress(0.3);
-      const imageData = renderFrames({ width: w, height: h }, frames.length, (ctx, _t, i) => {
-        if (fit === "contain") {
-          ctx.fillStyle = bg;
-          ctx.fillRect(0, 0, w, h);
-        }
-        const p = placement(frames[i].img, w, h, fit);
-        ctx.drawImage(frames[i].img, p.x, p.y, p.w, p.h);
-      });
+      const imageData = renderFrames({ width: w, height: h }, frames.length, (ctx, _t, i) =>
+        drawFrame(ctx, frames, i, w, h, fit, bg),
+      );
       setProgress(0.7);
       const data = encodeGif(imageData, {
         delayMs: ms,
@@ -266,25 +311,36 @@ function Body({ setBusy, setProgress, setError, publish }: ToolBodyProps) {
       </div>
 
       {fit === "contain" ? (
-        <div>
-          <Label htmlFor="gm-bg">background colour</Label>
-          <div className="flex gap-2">
-            <input
-              id="gm-bg"
-              type="color"
-              value={bg}
-              onChange={(e) => setBg(e.target.value)}
-              className="h-9 w-12 border border-input bg-background p-1 shrink-0"
-            />
-            <Input
-              aria-label="Background colour hex value"
-              value={bg}
-              spellCheck={false}
-              onChange={(e) => setBg(e.target.value)}
-            />
-          </div>
-        </div>
+        <ColorField id="gm-bg" label="background colour" value={bg} onChange={setBg} />
       ) : null}
+
+      <div>
+        <Label>live preview</Label>
+        <div className="checkerboard flex min-h-32 items-center justify-center border border-border p-3">
+          {frames.length ? (
+            <canvas
+              ref={canvasRef}
+              width={outW}
+              height={outH}
+              role="img"
+              aria-label={`Looping preview of ${frames.length} frame${
+                frames.length === 1 ? "" : "s"
+              } at ${outW} by ${outH} pixels`}
+              className="max-h-60 max-w-full"
+            />
+          ) : (
+            <p className="text-ui text-muted-foreground">Add images to see them play.</p>
+          )}
+        </div>
+        {frames.length ? (
+          <p className="text-label text-muted-foreground tabular-nums mt-1">
+            {`${outW} × ${outH} · ${frames.length} frame${frames.length === 1 ? "" : "s"} · ${Math.max(
+              20,
+              Math.round(delay),
+            )}ms each · ${(Math.max(20, Math.round(delay)) * frames.length) / 1000}s total`}
+          </p>
+        ) : null}
+      </div>
 
       <Button onClick={go} disabled={!frames.length}>
         Build GIF

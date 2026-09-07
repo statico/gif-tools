@@ -40,6 +40,39 @@ export async function getFFmpeg(onProgress?: ProgressFn): Promise<FFmpeg> {
   return loading;
 }
 
+/**
+ * There is one ffmpeg instance and one virtual FS, so two concurrent runs
+ * collide: fixed names like in.gif/out.gif get deleted out from under each
+ * other, and probe()'s global log handler scrapes the other run's stderr.
+ * Every exec goes through this chain, so they queue instead.
+ */
+let queue: Promise<unknown> = Promise.resolve();
+function serialize<T>(job: () => Promise<T>): Promise<T> {
+  const next = queue.then(job, job);
+  queue = next.catch(() => {});
+  return next;
+}
+
+/**
+ * Borrow the shared instance for a multi-file job (split, add-text) that
+ * runFFmpeg's one-in-one-out shape does not cover. Queued like every other run.
+ */
+export function withFFmpeg<T>(job: (ff: FFmpeg) => Promise<T>): Promise<T> {
+  return getFFmpeg().then((ff) => serialize(() => job(ff)));
+}
+
+/** Every frame currently in the wasm FS, sorted. Never throws. */
+export async function frameNames(ff: FFmpeg): Promise<string[]> {
+  try {
+    return (await ff.listDir("/"))
+      .filter((n) => !n.isDir && /^frame-\d+\.png$/.test(n.name))
+      .map((n) => n.name)
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
 export interface RunOptions {
   /** Files to place in the virtual FS before running. */
   inputs: Record<string, Uint8Array | Blob | File>;
@@ -69,43 +102,45 @@ export async function runFFmpeg({
   durationSec,
 }: RunOptions): Promise<Record<string, Uint8Array>> {
   const ff = await getFFmpeg(onProgress);
-  const written: string[] = [];
+  return serialize(async () => {
+    const written: string[] = [];
 
-  const handler = ({ progress, time }: { progress: number; time: number }) => {
-    // ffmpeg's own `progress` is unreliable for some filters; prefer time/duration.
-    const ratio = durationSec && durationSec > 0 ? time / 1e6 / durationSec : progress;
-    if (Number.isFinite(ratio)) onProgress?.(Math.min(Math.max(ratio, 0), 1));
-  };
-  ff.on("progress", handler);
+    const handler = ({ progress, time }: { progress: number; time: number }) => {
+      // ffmpeg's own `progress` is unreliable for some filters; prefer time/duration.
+      const ratio = durationSec && durationSec > 0 ? time / 1e6 / durationSec : progress;
+      if (Number.isFinite(ratio)) onProgress?.(Math.min(Math.max(ratio, 0), 1));
+    };
+    ff.on("progress", handler);
 
-  try {
-    for (const [name, data] of Object.entries(inputs)) {
-      await ff.writeFile(name, await toBytes(data));
-      written.push(name);
-    }
+    try {
+      for (const [name, data] of Object.entries(inputs)) {
+        await ff.writeFile(name, await toBytes(data));
+        written.push(name);
+      }
 
-    const code = await ff.exec(args);
-    if (code !== 0) throw new Error(`ffmpeg exited with code ${code}`);
+      const code = await ff.exec(args);
+      if (code !== 0) throw new Error(`ffmpeg exited with code ${code}`);
 
-    const result: Record<string, Uint8Array> = {};
-    for (const name of outputs) {
-      const data = await ff.readFile(name);
-      if (typeof data === "string") throw new Error(`expected binary output for ${name}`);
-      result[name] = data as Uint8Array;
-      written.push(name);
-    }
-    onProgress?.(1);
-    return result;
-  } finally {
-    ff.off("progress", handler);
-    for (const name of written) {
-      try {
-        await ff.deleteFile(name);
-      } catch {
-        /* already gone */
+      const result: Record<string, Uint8Array> = {};
+      for (const name of outputs) {
+        const data = await ff.readFile(name);
+        if (typeof data === "string") throw new Error(`expected binary output for ${name}`);
+        result[name] = data as Uint8Array;
+        written.push(name);
+      }
+      onProgress?.(1);
+      return result;
+    } finally {
+      ff.off("progress", handler);
+      for (const name of written) {
+        try {
+          await ff.deleteFile(name);
+        } catch {
+          /* already gone */
+        }
       }
     }
-  }
+  });
 }
 
 /** Convenience: one input, one output. */
@@ -158,20 +193,22 @@ export async function probe(
   const name = `probe-${Date.now()}`;
   const lines: string[] = [];
   const onLog = ({ message }: { message: string }) => lines.push(message);
-  ff.on("log", onLog);
-  try {
-    await ff.writeFile(name, new Uint8Array(await file.arrayBuffer()));
-    // No output file: ffmpeg errors out after printing the stream info we want.
-    await ff.exec(["-i", name]).catch(() => {});
-  } finally {
-    ff.off("log", onLog);
+  const text = await serialize(async () => {
+    ff.on("log", onLog);
     try {
-      await ff.deleteFile(name);
-    } catch {
-      /* ignore */
+      await ff.writeFile(name, new Uint8Array(await file.arrayBuffer()));
+      // No output file: ffmpeg errors out after printing the stream info we want.
+      await ff.exec(["-i", name]).catch(() => {});
+    } finally {
+      ff.off("log", onLog);
+      try {
+        await ff.deleteFile(name);
+      } catch {
+        /* ignore */
+      }
     }
-  }
-  const text = lines.join("\n");
+    return lines.join("\n");
+  });
   const dur = text.match(/Duration:\s*(\d+):(\d+):(\d+\.\d+)/);
   const dim = text.match(/,\s*(\d{2,5})x(\d{2,5})[\s,]/);
   return {

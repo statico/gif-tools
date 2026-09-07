@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Checkbox, Input, Label, Range } from "@/components/ui/field";
+import { Checkbox, Input, Label, Range, Readout } from "@/components/ui/field";
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { ffmpegOnce, paletteGifArgs, probe } from "@/lib/engines/ffmpeg";
 import { getTool } from "@/lib/tools";
@@ -16,7 +16,11 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   const [width, setWidth] = React.useState(480);
   const [colors, setColors] = React.useState(256);
   const [dither, setDither] = React.useState(true);
-  const [source, setSource] = React.useState<{ durationSec: number | null; width: number | null } | null>(null);
+  const [source, setSource] = React.useState<{
+    durationSec: number | null;
+    width: number | null;
+    height: number | null;
+  } | null>(null);
 
   // Read the real duration so the range can be prefilled and clamped.
   React.useEffect(() => {
@@ -44,11 +48,19 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
 
   const max = source?.durationSec ?? null;
   const duration = Math.max(0, end - start);
+  // scale=W:-1 keeps the aspect ratio, so the height ffmpeg picks is this.
+  const outHeight =
+    source?.width && source?.height ? Math.round((source.height * width) / source.width) : null;
+  // -t is clamped by however much video is actually left after -ss.
+  const outDuration =
+    max == null ? duration : Math.max(0, Math.min(end, max) - Math.min(start, max));
 
   const go = () =>
     run("Encoding GIF", async () => {
       if (!file) throw new Error("Choose a video first.");
-      if (duration <= 0) throw new Error("End time must be after the start time.");
+      if (outDuration <= 0) {
+        throw new Error("Pick a range inside the video — end must be after start.");
+      }
       const ext = file.name.split(".").pop()?.toLowerCase() || "mp4";
       const out = await ffmpegOnce(
         file,
@@ -58,7 +70,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
           "-ss",
           String(start),
           "-t",
-          String(duration),
+          String(outDuration),
           ...paletteGifArgs({
             input,
             output,
@@ -67,12 +79,12 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
             dither: dither ? "bayer:bayer_scale=5" : "none",
           }),
         ],
-        { onProgress: setProgress, durationSec: duration },
+        { onProgress: setProgress, durationSec: outDuration },
       );
       publish({
         data: out,
         ext: "gif",
-        note: `${start}s +${duration}s @ ${fps}fps ${width}px ${colors} colors`,
+        note: `${start}s +${outDuration}s @ ${fps}fps ${width}px ${colors} colors`,
       });
     });
 
@@ -112,7 +124,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
             aria-describedby="v2g-end-hint"
           />
           <p id="v2g-end-hint" className="text-label text-muted-foreground mt-1">
-            {duration > 0 ? `${duration.toFixed(2)}s of GIF` : "End must be after start"}
+            {outDuration > 0 ? `${outDuration.toFixed(2)}s of GIF` : "End must be after start"}
           </p>
         </div>
       </div>
@@ -158,6 +170,18 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
         label="Dither (smoother gradients, larger file)"
         checked={dither}
         onChange={(e) => setDither(e.target.checked)}
+      />
+
+      <Readout
+        rows={
+          [
+            ["size", outHeight ? `${width} × ${outHeight} px` : `${width} px × auto`],
+            ["format", ".gif"],
+            ["frame rate", `${fps} fps`],
+            ["colors", `up to ${colors}${dither ? ", dithered" : ""}`],
+            ["duration", `${outDuration.toFixed(2)} s`],
+          ] as const
+        }
       />
 
       <Button onClick={go} disabled={!file}>

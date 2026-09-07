@@ -3,10 +3,20 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox, Input, Label, Range, Select } from "@/components/ui/field";
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
-import { ffmpegOnce, paletteGifArgs } from "@/lib/engines/ffmpeg";
+import { ffmpegOnce, paletteGifArgs, probe } from "@/lib/engines/ffmpeg";
 import { getTool } from "@/lib/tools";
 
 const tool = getTool("speed");
+
+const secs = (v: number) => `${v.toFixed(2)}s`;
+
+// GIF frame delays are whole hundredths of a second and browsers clamp anything
+// under 2cs to 10cs, so a GIF that asks for more than 50fps plays back *slower*.
+const GIF_MAX_FPS = 50;
+// ponytail: probe() does not report a frame rate, so the readout's 15fps
+// reference source stands in. Widen this once probe returns the real rate.
+const REF_FPS = 15;
+const round1 = (v: number) => Math.round(v * 10) / 10;
 
 /** GIF stays a GIF, WebM stays WebM, any other video becomes MP4. */
 function outputExt(file: File): "gif" | "webm" | "mp4" {
@@ -23,6 +33,37 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   const [fps, setFps] = React.useState(15);
   const [drop, setDrop] = React.useState(false);
   const [dropFps, setDropFps] = React.useState(12);
+  const [duration, setDuration] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    if (!file) {
+      setDuration(null);
+      return;
+    }
+    let stale = false;
+    setBusy(true, "Reading duration");
+    probe(file)
+      .then((info) => {
+        if (!stale) setDuration(info.durationSec);
+      })
+      .catch(() => {
+        if (!stale) setDuration(null);
+      })
+      .finally(() => {
+        if (!stale) setBusy(false);
+      });
+    return () => {
+      stale = true;
+    };
+  }, [file, setBusy]);
+
+  // The fps filter only resamples, so the capped length still matches the headline.
+  const capFps =
+    !!file &&
+    outputExt(file) === "gif" &&
+    mode === "multiplier" &&
+    !drop &&
+    multiplier * REF_FPS > GIF_MAX_FPS;
 
   const go = () =>
     run("Changing speed", async () => {
@@ -36,9 +77,9 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
 
       // Multiplier retimes existing frames; fps mode stamps a fixed interval
       // onto every frame (N is the frame index, TB the output timebase).
-      const parts =
-        mode === "multiplier" ? [`setpts=PTS/${multiplier}`] : [`setpts=N/${fps}/TB`];
+      const parts = mode === "multiplier" ? [`setpts=PTS/${multiplier}`] : [`setpts=N/${fps}/TB`];
       if (mode === "multiplier" && drop) parts.push(`fps=${dropFps}`);
+      if (capFps) parts.push(`fps=${GIF_MAX_FPS}`);
       const filters = parts.join(",");
 
       const ext = outputExt(file);
@@ -62,11 +103,38 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
         data: out,
         ext,
         note:
-          mode === "multiplier"
-            ? `${multiplier}x${drop ? ` @ ${dropFps}fps` : ""}`
-            : `${fps} fps`,
+          mode === "multiplier" ? `${multiplier}x${drop ? ` @ ${dropFps}fps` : ""}` : `${fps} fps`,
       });
     });
+
+  // Live readout, derived from the same numbers the filters are built from:
+  // setpts=PTS/m divides the length by m; the fps filter only resamples, so it
+  // changes the frame rate and not the length. setpts=N/fps/TB restamps every
+  // frame at a fixed interval, so the new length is frame count ÷ fps.
+  const badMultiplier = mode === "multiplier" && !(multiplier >= 0.1 && multiplier <= 10);
+  const badFps = mode === "fps" && !(fps >= 1 && fps <= 60);
+  let headline: string;
+  let detail: string;
+  if (badMultiplier || badFps) {
+    headline = "Out of range";
+    detail = badMultiplier
+      ? "Speed multiplier must be between 0.1x and 10x."
+      : "Target frame rate must be between 1 and 60 fps.";
+  } else if (mode === "multiplier") {
+    headline = duration
+      ? `${secs(duration)} → ${secs(duration / multiplier)}`
+      : `Length ÷ ${multiplier}`;
+    detail = drop
+      ? `Frame rate forced to ${dropFps} fps (frames are dropped, the length above does not change).`
+      : capFps
+        ? `Frame rate capped at ${GIF_MAX_FPS} fps — a GIF cannot hold a frame for less than 2/100s, so anything faster would play slower instead.`
+        : `Frame rate ×${multiplier} — a 15 fps source plays at ${round1(15 * multiplier)} fps.`;
+  } else {
+    headline = `Every frame held ${(1 / fps).toFixed(3)}s`;
+    detail = `New length is frame count ÷ ${fps} fps${
+      duration ? `, so it stays ${secs(duration)} only if the source is already ${fps} fps` : ""
+    }.`;
+  }
 
   return (
     <>
@@ -142,6 +210,16 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
           ) : null}
         </div>
       ) : null}
+
+      <div
+        role="status"
+        aria-live="polite"
+        className="border border-border bg-smui-surface-0 p-3 grid gap-1"
+      >
+        <span className="text-label uppercase tracking-wider text-muted-foreground">result</span>
+        <p className="text-ui text-foreground tabular-nums">{headline}</p>
+        <p className="text-label text-muted-foreground tabular-nums">{detail}</p>
+      </div>
 
       <Button onClick={go} disabled={!file}>
         Change speed

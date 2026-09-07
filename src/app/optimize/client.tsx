@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Checkbox, Label, Range, Select } from "@/components/ui/field";
+import { Checkbox, Label, Range, Readout, Select } from "@/components/ui/field";
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { optimizeGif } from "@/lib/engines/gifsicle";
 import { getTool } from "@/lib/tools";
@@ -15,10 +15,47 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   const [lossy, setLossy] = React.useState(60);
   const [useLossy, setUseLossy] = React.useState(true);
   const [colors, setColors] = React.useState(256);
-  const [saving, setSaving] = React.useState<string | null>(null);
+  const [saving, setSaving] = React.useState<{ text: string; pct: number } | null>(null);
+  const [dims, setDims] = React.useState<{ w: number; h: number } | null>(null);
+
+  // A GIF decodes in an <img>, so the dimensions cost nothing but a decode.
+  React.useEffect(() => {
+    setSaving(null);
+    if (!file) {
+      setDims(null);
+      return;
+    }
+    setDims(null);
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => setDims({ w: img.naturalWidth, h: img.naturalHeight });
+    img.src = url;
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  // gifsicle only gets --colors when it is below 256, and no --scale at all.
+  const lossyWords =
+    lossy <= 40
+      ? "barely visible"
+      : lossy <= 80
+        ? "slight noise"
+        : lossy <= 140
+          ? "visible noise"
+          : "heavy artifacts";
+  const readout: [string, string][] = [
+    ["size", dims ? `${dims.w} × ${dims.h} px` : file ? "reading…" : "—"],
+    ["format", ".gif"],
+    ["colors", colors < 256 ? `reduced to ${colors}` : "palette unchanged"],
+    ["lossy", useLossy ? `${lossy} — ${lossyWords}` : "off"],
+    [
+      "effort",
+      level === 1 ? "changed areas only" : level === 2 ? "+ transparency reuse" : "every method",
+    ],
+  ];
 
   const go = () =>
     run("Optimizing", async () => {
+      setSaving(null); // a failed run must not leave the last file's result on screen
       if (!file) throw new Error("Choose a GIF first.");
       setProgress(0.3);
       const out = await optimizeGif(file, {
@@ -28,9 +65,10 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       });
       setProgress(1);
       const pct = Math.round((1 - out.length / file.size) * 100);
-      setSaving(
-        `${formatBytes(file.size)} → ${formatBytes(out.length)} (${pct >= 0 ? `${pct}% smaller` : `${-pct}% larger`})`,
-      );
+      setSaving({
+        text: `${formatBytes(file.size)} → ${formatBytes(out.length)} (${pct >= 0 ? `${pct}% smaller` : `${-pct}% larger`})`,
+        pct,
+      });
       publish({
         data: out,
         ext: "gif",
@@ -81,7 +119,18 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
         ) : null}
       </div>
 
-      {saving ? <p className="text-ui text-[hsl(var(--smui-green))]">{saving}</p> : null}
+      <Readout rows={readout} />
+
+      {saving ? (
+        <p
+          role="status"
+          className={`text-ui ${
+            saving.pct >= 0 ? "text-[hsl(var(--smui-green))]" : "text-[hsl(var(--smui-yellow))]"
+          }`}
+        >
+          {saving.text}
+        </p>
+      ) : null}
 
       <Button onClick={go} disabled={!file}>
         Optimize GIF
