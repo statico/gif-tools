@@ -1,9 +1,9 @@
 "use client";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Input, Label, Range, Select } from "@/components/ui/field";
+import { ColorField, Input, Label, Range, Select } from "@/components/ui/field";
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
-import { getFFmpeg, probe } from "@/lib/engines/ffmpeg";
+import { frameNames, probe, withFFmpeg } from "@/lib/engines/ffmpeg";
 import { encodeGif, loadImage } from "@/lib/engines/gif-encode";
 import { getTool } from "@/lib/tools";
 
@@ -56,7 +56,8 @@ function compose(canvas: HTMLCanvasElement, img: HTMLImageElement, s: Style) {
   const lineHeight = s.fontSize * 1.15;
   const topLines = wrap(measure, s.top, w - pad * 2);
   const bottomLines = wrap(measure, s.bottom, w - pad * 2);
-  const barHeight = (n: number) => (s.mode === "bar" && n ? Math.round(n * lineHeight + pad * 2) : 0);
+  const barHeight = (n: number) =>
+    s.mode === "bar" && n ? Math.round(n * lineHeight + pad * 2) : 0;
   const topBar = barHeight(topLines.length);
   const bottomBar = barHeight(bottomLines.length);
 
@@ -101,6 +102,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   const run = useRun({ setBusy, setError, setProgress });
   const [frames, setFrames] = React.useState<HTMLImageElement[]>([]);
   const [frameDelay, setFrameDelay] = React.useState(100);
+  const [truncated, setTruncated] = React.useState(false);
   const [style, setStyle] = React.useState<Style>({
     top: "one does not simply",
     bottom: "make a meme",
@@ -119,50 +121,63 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   React.useEffect(() => {
     if (!file) {
       setFrames([]);
+      setTruncated(false);
       return;
     }
+    // Picking file B while A is still decoding must not let A's frames land.
+    let stale = false;
     void run("Reading frames", async () => {
-      const ff = await getFFmpeg();
       const input = `in-${Date.now()}`;
-      const written: string[] = [input];
-      try {
-        await ff.writeFile(input, new Uint8Array(await file.arrayBuffer()));
-        const code = await ff.exec(["-i", input, "-vsync", "0", "frame-%04d.png"]);
-        if (code !== 0) throw new Error("ffmpeg could not read that file. Try a GIF, PNG or JPEG.");
-        const out: HTMLImageElement[] = [];
-        for (let i = 1; i <= MAX_FRAMES; i++) {
-          const name = `frame-${String(i).padStart(4, "0")}.png`;
-          let data: Uint8Array;
-          try {
+      // Probe first: it takes the same queue slot withFFmpeg holds, so calling it
+      // from inside the closure would wait on a job that is waiting on it.
+      const { durationSec } = await probe(file);
+      await withFFmpeg(async (ff) => {
+        try {
+          await ff.writeFile(input, new Uint8Array(await file.arrayBuffer()));
+          const code = await ff.exec(["-i", input, "-vsync", "0", "frame-%04d.png"]);
+          if (code !== 0)
+            throw new Error("ffmpeg could not read that file. Try a GIF, PNG or JPEG.");
+          const names = await frameNames(ff);
+          if (!names.length)
+            throw new Error("No frames came out of that file. Try a GIF, PNG or JPEG.");
+          const out: HTMLImageElement[] = [];
+          for (const name of names.slice(0, MAX_FRAMES)) {
             const read = await ff.readFile(name);
             if (typeof read === "string") break;
-            data = read as Uint8Array;
-          } catch {
-            break;
+            const data = read as Uint8Array;
+            out.push(
+              await loadImage(
+                new Blob([data.slice().buffer as ArrayBuffer], { type: "image/png" }),
+              ),
+            );
+            setProgress(Math.min(0.9, out.length / 60));
           }
-          written.push(name);
-          out.push(await loadImage(new Blob([data.slice().buffer as ArrayBuffer], { type: "image/png" })));
-          setProgress(Math.min(0.9, i / 60));
-        }
-        if (!out.length) throw new Error("No frames came out of that file. Try a GIF, PNG or JPEG.");
-        setFrames(out);
-        const { durationSec } = await probe(file);
-        setFrameDelay(
-          durationSec && out.length > 1
-            ? Math.max(20, Math.round((durationSec * 1000) / out.length))
-            : 100,
-        );
-        setProgress(1);
-      } finally {
-        for (const name of written) {
-          try {
-            await ff.deleteFile(name);
-          } catch {
-            /* already gone */
+          if (!out.length)
+            throw new Error("No frames came out of that file. Try a GIF, PNG or JPEG.");
+          if (stale) return;
+          setFrames(out);
+          setTruncated(names.length > MAX_FRAMES);
+          setFrameDelay(
+            durationSec && out.length > 1
+              ? Math.max(20, Math.round((durationSec * 1000) / out.length))
+              : 100,
+          );
+          setProgress(1);
+        } finally {
+          // Delete by pattern: a truncated source leaves frames this run never read.
+          for (const name of [input, ...(await frameNames(ff))]) {
+            try {
+              await ff.deleteFile(name);
+            } catch {
+              /* already gone */
+            }
           }
         }
-      }
+      });
     });
+    return () => {
+      stale = true;
+    };
   }, [file, run, setProgress]);
 
   // Live preview of the first frame.
@@ -184,7 +199,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       frames.forEach((img, i) => {
         const ctx = compose(canvas, img, style);
         images.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
-        setProgress((i + 1) / frames.length * 0.8);
+        setProgress(((i + 1) / frames.length) * 0.8);
       });
       const data = encodeGif(images, { delayMs: frameDelay, loop: 0, transparent: false });
       setProgress(1);
@@ -194,32 +209,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
         note: `${style.mode} · ${style.fontSize}px · ${frames.length} frames`,
       });
     });
-
-  const colorField = (
-    id: string,
-    label: string,
-    value: string,
-    onChange: (v: string) => void,
-  ) => (
-    <div>
-      <Label htmlFor={id}>{label}</Label>
-      <div className="flex gap-2">
-        <input
-          id={id}
-          type="color"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="h-9 w-12 border border-input bg-background p-1 shrink-0"
-        />
-        <Input
-          aria-label={`${label} hex value`}
-          value={value}
-          spellCheck={false}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      </div>
-    </div>
-  );
 
   return (
     <>
@@ -256,8 +245,18 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
           value={style.fontSize}
           onChange={(e) => set("fontSize", Number(e.target.value))}
         />
-        {colorField("at-color", "text colour", style.color, (v) => set("color", v))}
-        {colorField("at-outline", "outline colour", style.outline, (v) => set("outline", v))}
+        <ColorField
+          id="at-color"
+          label="text colour"
+          value={style.color}
+          onChange={(v) => set("color", v)}
+        />
+        <ColorField
+          id="at-outline"
+          label="outline colour"
+          value={style.outline}
+          onChange={(v) => set("outline", v)}
+        />
         <Range
           label="outline width"
           suffix="px"
@@ -267,9 +266,14 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
           value={style.outlineWidth}
           onChange={(e) => set("outlineWidth", Number(e.target.value))}
         />
-        {style.mode === "bar"
-          ? colorField("at-bar", "caption bar colour", style.barColor, (v) => set("barColor", v))
-          : null}
+        {style.mode === "bar" ? (
+          <ColorField
+            id="at-bar"
+            label="caption bar colour"
+            value={style.barColor}
+            onChange={(v) => set("barColor", v)}
+          />
+        ) : null}
       </div>
 
       <div>
@@ -290,6 +294,12 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
           )}
         </div>
       </div>
+
+      {truncated ? (
+        <p role="status" className="text-ui text-[hsl(var(--smui-yellow))]">
+          That file has more than {MAX_FRAMES} frames; only the first {MAX_FRAMES} are captioned.
+        </p>
+      ) : null}
 
       <Button onClick={go} disabled={!frames.length}>
         Add text

@@ -3,11 +3,15 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/field";
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
-import { ffmpegOnce, paletteGifArgs, probe } from "@/lib/engines/ffmpeg";
+import { ffmpegOnce, paletteGifArgs } from "@/lib/engines/ffmpeg";
 import { getTool } from "@/lib/tools";
 import { outExt } from "@/lib/format";
+import { useFirstFrame } from "@/lib/preview";
 
 const tool = getTool("crop");
+
+/** Side of the square live-preview canvas, in device-independent pixels. */
+const PREVIEW = 240;
 
 const RATIOS: Record<string, number | null> = {
   free: null,
@@ -20,43 +24,28 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), h
 
 function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) {
   const run = useRun({ setBusy, setError, setProgress });
-  const [src, setSrc] = React.useState<{ w: number; h: number } | null>(null);
   const [sel, setSel] = React.useState({ x: 0, y: 0, w: 0, h: 0 });
   const [ratioKey, setRatioKey] = React.useState("free");
   const boxRef = React.useRef<HTMLDivElement>(null);
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const dragStart = React.useRef<{ x: number; y: number } | null>(null);
   const ratio = RATIOS[ratioKey] ?? null;
+  const { frame, size: src } = useFirstFrame(file);
 
   const url = React.useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
-  React.useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
+  React.useEffect(
+    () => () => {
+      if (url) URL.revokeObjectURL(url);
+    },
+    [url],
+  );
 
+  // The decoded frame is the one source of truth for dimensions, so `sel` and the
+  // preview share a coordinate space. probe() would boot the 32MB ffmpeg core to
+  // read two numbers the decode already gave us.
   React.useEffect(() => {
-    if (!file) {
-      setSrc(null);
-      return;
-    }
-    let stale = false;
-    setBusy(true, "Reading dimensions");
-    probe(file)
-      .then((info) => {
-        if (stale) return;
-        if (!info.width || !info.height) {
-          setError("Could not read the dimensions of that file. Try a GIF, image or video.");
-          return;
-        }
-        setSrc({ w: info.width, h: info.height });
-        setSel({ x: 0, y: 0, w: info.width, h: info.height });
-      })
-      .catch((e: unknown) => {
-        if (!stale) setError(e instanceof Error ? e.message : "Could not read that file.");
-      })
-      .finally(() => {
-        if (!stale) setBusy(false);
-      });
-    return () => {
-      stale = true;
-    };
-  }, [file, setBusy, setError]);
+    if (src) setSel({ x: 0, y: 0, w: src.w, h: src.h });
+  }, [src]);
 
   /** Clamp a candidate rect to the source and honour the aspect preset. */
   const commit = React.useCallback(
@@ -83,13 +72,44 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ratioKey]);
 
+  // Live preview of the exact rect ffmpeg will crop: same `sel`, no reprojection
+  // from screen coordinates. One drawImage per pointermove keeps the drag smooth.
+  React.useEffect(() => {
+    const c = canvasRef.current;
+    const ctx = c?.getContext("2d");
+    if (!c || !ctx || !frame || !src || sel.w < 1 || sel.h < 1) return;
+    const fit = Math.min(PREVIEW / sel.w, PREVIEW / sel.h);
+    const dw = Math.max(1, Math.round(sel.w * fit));
+    const dh = Math.max(1, Math.round(sel.h * fit));
+    ctx.clearRect(0, 0, PREVIEW, PREVIEW);
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(
+      frame,
+      sel.x,
+      sel.y,
+      sel.w,
+      sel.h,
+      Math.round((PREVIEW - dw) / 2),
+      Math.round((PREVIEW - dh) / 2),
+      dw,
+      dh,
+    );
+  }, [frame, src, sel]);
+
   const pointToImage = (clientX: number, clientY: number) => {
     const el = boxRef.current;
     if (!el || !src) return { x: 0, y: 0 };
     const r = el.getBoundingClientRect();
+    // Map through the padding box (getBoundingClientRect includes the border) and
+    // through the object-contain letterbox, or the drag drifts from the cursor.
+    const cw = el.clientWidth;
+    const ch = el.clientHeight;
+    const scale = Math.min(cw / src.w, ch / src.h) || 1;
+    const ox = r.left + el.clientLeft + (cw - src.w * scale) / 2;
+    const oy = r.top + el.clientTop + (ch - src.h * scale) / 2;
     return {
-      x: clamp(((clientX - r.left) * src.w) / r.width, 0, src.w),
-      y: clamp(((clientY - r.top) * src.h) / r.height, 0, src.h),
+      x: clamp((clientX - ox) / scale, 0, src.w),
+      y: clamp((clientY - oy) / scale, 0, src.h),
     };
   };
 
@@ -122,9 +142,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       if (!file) throw new Error("Choose a file first.");
       if (!src) throw new Error("Still reading the source dimensions — try again in a moment.");
       if (sel.w < 1 || sel.h < 1) throw new Error("The crop area must be at least 1×1 pixels.");
-      if (sel.x + sel.w > src.w || sel.y + sel.h > src.h) {
-        throw new Error(`The crop area must stay inside the ${src.w}×${src.h} source.`);
-      }
       const ext = outExt(file.name);
       const isVideo = ext === "mp4" || ext === "webm";
       const w = isVideo ? Math.max(2, sel.w - (sel.w % 2)) : sel.w;
@@ -190,6 +207,27 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       <p className="text-ui text-muted-foreground">
         Drag on the preview to draw a crop area, or type exact pixels below.
       </p>
+
+      {src ? (
+        <div>
+          <Label>cropped result</Label>
+          <div className="flex items-center gap-4 border border-border p-3">
+            <div className="checkerboard shrink-0 border border-border">
+              <canvas
+                ref={canvasRef}
+                width={PREVIEW}
+                height={PREVIEW}
+                className="block size-32"
+                role="img"
+                aria-label={`Live preview of the crop: ${sel.w} by ${sel.h} pixels, taken from ${sel.x},${sel.y}`}
+              />
+            </div>
+            <p className="text-ui text-muted-foreground min-w-0">
+              {sel.w}×{sel.h} px
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       <div>
         <Label htmlFor="crop-ratio">aspect ratio</Label>

@@ -25,17 +25,19 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   const [end, setEnd] = React.useState(0);
 
   React.useEffect(() => {
-    if (!file) {
-      setDuration(null);
-      return;
-    }
+    // Drop the old file's timing first: a failed probe must not leave the
+    // sliders and the Cut button live on the previous file's duration.
+    setDuration(null);
+    if (!file) return;
     let stale = false;
     setBusy(true, "Reading duration");
     probe(file)
       .then((info) => {
         if (stale) return;
         if (!info.durationSec) {
-          setError("Could not read a duration from that file. Cut needs an animated GIF or a video.");
+          setError(
+            "Could not read a duration from that file. Cut needs an animated GIF or a video.",
+          );
           return;
         }
         setDuration(info.durationSec);
@@ -54,15 +56,18 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   }, [file, setBusy, setError]);
 
   const max = duration ?? 0;
+  // Never let the two controls meet: the selection is always at least minLen,
+  // so "end before start" and a zero-length cut cannot be typed or dragged in.
+  const minLen = Math.min(0.1, max);
   const onStart = (v: number) => {
-    const s = clamp(round2(v), 0, max);
+    const s = clamp(round2(v), 0, round2(max - minLen));
     setStart(s);
-    if (s >= end) setEnd(round2(Math.min(max, s + 0.1)));
+    if (end < s + minLen) setEnd(round2(s + minLen));
   };
   const onEnd = (v: number) => {
-    const e = clamp(round2(v), 0, max);
+    const e = clamp(round2(v), round2(minLen), max);
     setEnd(e);
-    if (e <= start) setStart(round2(Math.max(0, e - 0.1)));
+    if (start > e - minLen) setStart(round2(e - minLen));
   };
 
   const selected = round2(Math.max(0, end - start));
@@ -102,7 +107,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
             id="cut-start-range"
             type="range"
             min={0}
-            max={max || 1}
+            max={round2(max - minLen) || 1}
             step={0.01}
             value={start}
             disabled={!duration}
@@ -114,7 +119,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
             id="cut-start-num"
             type="number"
             min={0}
-            max={max || undefined}
+            max={round2(max - minLen) || undefined}
             step={0.01}
             value={start}
             disabled={!duration}
@@ -127,7 +132,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
           <input
             id="cut-end-range"
             type="range"
-            min={0}
+            min={round2(minLen)}
             max={max || 1}
             step={0.01}
             value={end}
@@ -139,7 +144,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
           <Input
             id="cut-end-num"
             type="number"
-            min={0}
+            min={round2(minLen)}
             max={max || undefined}
             step={0.01}
             value={end}
@@ -149,11 +154,23 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
         </div>
       </div>
 
-      <p className="text-ui text-muted-foreground" role="status" aria-live="polite">
-        {duration
-          ? `Source ${round2(duration)}s → keeping ${selected}s (${start}s to ${end}s)`
-          : "Choose an animated GIF or video to read its duration."}
-      </p>
+      <div
+        role="status"
+        aria-live="polite"
+        className="border border-border bg-smui-surface-0 p-3 grid gap-1"
+      >
+        <span className="text-label uppercase tracking-wider text-muted-foreground">result</span>
+        <p className="text-ui text-foreground tabular-nums">
+          {duration
+            ? `${round2(duration)}s \u2192 ${selected}s`
+            : "Choose an animated GIF or video to read its duration."}
+        </p>
+        {duration ? (
+          <p className="text-label text-muted-foreground tabular-nums">
+            {`Keeping ${start}s to ${end}s of the source.`}
+          </p>
+        ) : null}
+      </div>
 
       <Button onClick={go} disabled={!file || !duration}>
         Cut

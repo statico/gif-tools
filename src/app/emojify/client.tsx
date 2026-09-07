@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Input, Label, Range, Select } from "@/components/ui/field";
+import { ColorField, Input, Label, Range, Select } from "@/components/ui/field";
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { encodeGif, loadImage, renderFrames } from "@/lib/engines/gif-encode";
 import { getTool } from "@/lib/tools";
@@ -10,15 +10,7 @@ import { hslToRgb, rgbToHsl } from "@/lib/color";
 const tool = getTool("emojify");
 
 type EffectId =
-  | "spin"
-  | "bounce"
-  | "zoom"
-  | "wiggle"
-  | "vibrate"
-  | "rainbow"
-  | "roll"
-  | "shake"
-  | "slide";
+  "spin" | "bounce" | "zoom" | "wiggle" | "vibrate" | "rainbow" | "roll" | "shake" | "slide";
 
 interface EffectDef {
   id: EffectId;
@@ -131,12 +123,7 @@ interface Settings {
   bg: string | null;
 }
 
-function drawFrame(
-  ctx: CanvasRenderingContext2D,
-  img: HTMLImageElement,
-  i: number,
-  s: Settings,
-) {
+function drawFrame(ctx: CanvasRenderingContext2D, img: HTMLImageElement, i: number, s: Settings) {
   const { size } = s;
   const def = BY_ID[s.effect];
   const t = (i % s.frames) / s.frames;
@@ -157,7 +144,7 @@ function drawFrame(
       rot = spin * a * 2 * Math.PI * t;
       break;
     case "bounce":
-      dy = -(size * a) / 100 * Math.abs(Math.sin(Math.PI * t));
+      dy = (-(size * a) / 100) * Math.abs(Math.sin(Math.PI * t));
       break;
     case "zoom":
       scale = 1 + (a / 100) * Math.sin(2 * Math.PI * t);
@@ -380,7 +367,11 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       {def.dir === "rotation" ? (
         <div>
           <Label htmlFor="emo-dir">rotation direction</Label>
-          <Select id="emo-dir" value={cw ? "cw" : "ccw"} onChange={(e) => setCw(e.target.value === "cw")}>
+          <Select
+            id="emo-dir"
+            value={cw ? "cw" : "ccw"}
+            onChange={(e) => setCw(e.target.value === "cw")}
+          >
             <option value="cw">Clockwise</option>
             <option value="ccw">Anticlockwise</option>
           </Select>
@@ -447,29 +438,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       </div>
 
       {bgMode === "color" ? (
-        <div className="flex items-end gap-2">
-          <div className="w-24">
-            <Label htmlFor="emo-bg-color">colour</Label>
-            <Input
-              id="emo-bg-color"
-              type="color"
-              value={safeBg}
-              onChange={(e) => setBg(e.target.value)}
-              className="p-1"
-            />
-          </div>
-          <div className="flex-1 min-w-0">
-            <Label htmlFor="emo-bg-hex">hex value</Label>
-            <Input
-              id="emo-bg-hex"
-              value={bg}
-              spellCheck={false}
-              pattern="#[0-9a-fA-F]{6}"
-              aria-invalid={bg !== safeBg}
-              onChange={(e) => setBg(e.target.value.trim())}
-            />
-          </div>
-        </div>
+        <ColorField id="emo-bg-color" label="colour" value={bg} onChange={setBg} />
       ) : null}
 
       <Button onClick={go} disabled={!file}>

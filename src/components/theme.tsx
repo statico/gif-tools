@@ -20,9 +20,9 @@ export function ThemeToggle() {
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
 
-  // Before hydration we don't know the resolved theme; render a stable
-  // placeholder so the button doesn't flip icons on mount.
-  const current = (mounted ? theme : "system") as keyof typeof ICON;
+  // Before hydration we don't know the resolved theme; render defaultTheme so
+  // the icon matches what most first visits resolve to and does not flip on mount.
+  const current = (mounted ? theme : "dark") as keyof typeof ICON;
   const Icon = ICON[current] ?? Monitor;
 
   return (

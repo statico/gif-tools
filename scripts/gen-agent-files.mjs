@@ -8,6 +8,7 @@ import { writeFile, readFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
 const { TOOLS, CATEGORIES } = await import("../src/lib/tools.ts");
+const { TERMS } = await import("../src/lib/glossary.ts");
 const { SITE } = await import("../src/lib/site.ts");
 
 const OUT = join(process.cwd(), "out");
@@ -172,6 +173,63 @@ ${TOOLS.filter((t) => t.category === cat)
 `,
 );
 
+/* ── glossary.md and history.md ────────────────────────────────────────── */
+await write(
+  "glossary.md",
+  `---
+title: "GIF glossary — ${SITE.name}"
+description: "Plain definitions of the terms these tools use."
+url: "${SITE.url}/glossary.md"
+last_updated: "${now}"
+doc_version: "1"
+---
+
+# GIF glossary
+
+The terms these tools use, defined once. Every setting on every page means one of
+these things.
+
+${TERMS.map(
+  (t) =>
+    `## ${t.term}\n\n${t.body}${
+      t.see ? `\n\nSee [${TOOLS.find((x) => x.slug === t.see)?.name}](${SITE.url}/${t.see}.md).` : ""
+    }`,
+).join("\n\n")}
+
+## Sitemap
+
+- [Every page, grouped by section](${SITE.url}/sitemap.md)
+`,
+);
+
+await write(
+  "history.md",
+  `---
+title: "History — ${SITE.name}"
+description: "Your recent results, stored in this browser only."
+url: "${SITE.url}/history.md"
+last_updated: "${now}"
+doc_version: "1"
+---
+
+# History
+
+Every result you generate is kept in this browser — the index in localStorage and
+the files themselves in IndexedDB. Nothing is uploaded, so the list is per-browser
+and per-device, and clearing site data clears it.
+
+## What you can do here
+
+- Download any past result again under its original filename.
+- Delete a single entry, or clear the whole history.
+- See which tool produced each file, and when.
+
+## Sitemap
+
+- [Every page, grouped by section](${SITE.url}/sitemap.md)
+`,
+);
+
 /* ── AGENTS.md (served copy) ───────────────────────────────────────────── */
 await write("AGENTS.md", await readFile(join(process.cwd(), "AGENTS.md"), "utf8"));
 
@@ -183,6 +241,8 @@ console.log(`\ngenerated agent files for ${TOOLS.length} tools`);
 const mirrors = [
   ...TOOLS.map((t) => [`/${t.slug}.md`, `${SITE.url}/${t.slug}/`]),
   ["/index.md", `${SITE.url}/`],
+  ["/glossary.md", `${SITE.url}/glossary/`],
+  ["/history.md", `${SITE.url}/history/`],
   ["/sitemap.md", `${SITE.url}/sitemap.md`],
   ["/AGENTS.md", `${SITE.url}/AGENTS.md`],
 ];
