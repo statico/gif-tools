@@ -1,0 +1,68 @@
+import type { Metadata } from "next";
+import { SITE } from "./site";
+import { getTool } from "./tools";
+
+export function toolMetadata(slug: string): Metadata {
+  const tool = getTool(slug);
+  const url = `${SITE.url}/${slug}/`;
+  return {
+    title: tool.title,
+    description: tool.description,
+    keywords: tool.keywords,
+    alternates: { canonical: url, types: { "text/markdown": `${SITE.url}/${slug}.md` } },
+    openGraph: {
+      type: "website",
+      url,
+      siteName: SITE.name,
+      title: tool.title,
+      description: tool.description,
+      locale: SITE.locale,
+      images: [{ url: `${SITE.url}/og.png`, width: 1200, height: 630, alt: tool.title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: tool.title,
+      description: tool.description,
+      images: [`${SITE.url}/og.png`],
+    },
+  };
+}
+
+/** WebApplication + BreadcrumbList JSON-LD for a tool page. */
+export function toolJsonLd(slug: string) {
+  const tool = getTool(slug);
+  const url = `${SITE.url}/${slug}/`;
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        name: tool.title,
+        url,
+        description: tool.description,
+        applicationCategory: "MultimediaApplication",
+        operatingSystem: "Any browser",
+        browserRequirements: "Requires WebAssembly",
+        offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+        isAccessibleForFree: true,
+        dateModified: new Date().toISOString(),
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: SITE.name, item: `${SITE.url}/` },
+          { "@type": "ListItem", position: 2, name: tool.name, item: url },
+        ],
+      },
+    ],
+  };
+}
+
+export function JsonLd({ data }: { data: unknown }) {
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}
