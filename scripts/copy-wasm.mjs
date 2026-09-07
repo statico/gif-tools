@@ -9,12 +9,12 @@
 // dynamic import, which a module worker supports natively.
 import { mkdir, copyFile, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { gzipSync } from "node:zlib";
 
 const nm = join(process.cwd(), "node_modules");
 
 const jobs = [
   ["@ffmpeg/core/dist/esm/ffmpeg-core.js", "public/ffmpeg/ffmpeg-core.js"],
-  ["@ffmpeg/core/dist/esm/ffmpeg-core.wasm", "public/ffmpeg/ffmpeg-core.wasm"],
   // x86 (wasm32), not x64: initializeImageMagick() is the 32-bit glue — the
   // 64-bit build only links against initializeImageMagickx64.
   ["@imagemagick/magick-wasm/dist/x86/magick.wasm", "public/magick/magick.wasm"],
@@ -26,6 +26,13 @@ for (const [rel, dest] of jobs) {
   await copyFile(join(nm, rel), out);
   console.log(`copied ${dest}`);
 }
+
+// Cloudflare Pages rejects any file over 25 MiB and the core is 31, so it ships
+// gzipped and the loader inflates it in the browser (see engines/ffmpeg.ts).
+// Level 6, not 9: 9 costs ten seconds of build time to save half a megabyte.
+const wasm = await readFile(join(nm, "@ffmpeg/core/dist/esm/ffmpeg-core.wasm"));
+await writeFile(join(process.cwd(), "public/ffmpeg/ffmpeg-core.wasm.gz"), gzipSync(wasm));
+console.log("gzipped public/ffmpeg/ffmpeg-core.wasm.gz");
 
 // Patch the worker's stubbed core loader back into a real dynamic import.
 const STUB = `function t(e){return Promise.resolve().then((()=>{var t=new Error("Cannot find module '"+e+"'");throw t.code="MODULE_NOT_FOUND",t}))}`;
