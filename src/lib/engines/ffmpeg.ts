@@ -14,6 +14,20 @@ let loading: Promise<FFmpeg> | null = null;
 
 export type ProgressFn = (ratio: number, message?: string) => void;
 
+/**
+ * The 31MB core is served gzipped because Cloudflare Pages refuses to host a
+ * file over 25MB, so it is inflated here and handed to ffmpeg as a blob URL.
+ * The transfer is the same size either way — the browser would have negotiated
+ * gzip anyway — this just moves the decompression from the edge into the page.
+ */
+async function inflateCore(): Promise<string> {
+  const res = await fetch(new URL("/ffmpeg/ffmpeg-core.wasm.gz", location.href));
+  if (!res.ok || !res.body) throw new Error(`could not fetch the ffmpeg core (HTTP ${res.status})`);
+  const wasm = res.body.pipeThrough(new DecompressionStream("gzip"));
+  const bytes = await new Response(wasm).arrayBuffer();
+  return URL.createObjectURL(new Blob([bytes], { type: "application/wasm" }));
+}
+
 export async function getFFmpeg(onProgress?: ProgressFn): Promise<FFmpeg> {
   if (instance) return instance;
   if (!loading) {
@@ -26,7 +40,7 @@ export async function getFFmpeg(onProgress?: ProgressFn): Promise<FFmpeg> {
         // root-relative path ends up as file:/// and the Worker refuses to load.
         classWorkerURL: new URL("/ffmpeg/worker.js", location.href).href,
         coreURL: new URL("/ffmpeg/ffmpeg-core.js", location.href).href,
-        wasmURL: new URL("/ffmpeg/ffmpeg-core.wasm", location.href).href,
+        wasmURL: await inflateCore(),
       });
       instance = ff;
       return ff;
