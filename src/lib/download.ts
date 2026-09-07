@@ -1,15 +1,5 @@
 "use client";
 
-import { slugify } from "./utils";
-
-/**
- * Slack rejects emoji names with spaces or punctuation and truncates long
- * ones, so downloads default to a slug that can be uploaded as-is.
- */
-export function emojiFilename(name: string, ext: string, fallback = "emoji"): string {
-  return `${slugify(name, fallback)}.${ext.replace(/^\./, "")}`;
-}
-
 export function download(data: Uint8Array | Blob, filename: string, mime?: string) {
   const blob =
     data instanceof Blob
@@ -26,7 +16,7 @@ export function download(data: Uint8Array | Blob, filename: string, mime?: strin
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export const MIME: Record<string, string> = {
+const MIME: Record<string, string> = {
   gif: "image/gif",
   png: "image/png",
   jpg: "image/jpeg",

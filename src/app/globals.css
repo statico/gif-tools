@@ -179,3 +179,13 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Transparency checkerboard behind previews of images with an alpha channel.
+   --checker-size lets a caller tighten it for the 22px Slack-size preview. */
+.checkerboard {
+  background-image: repeating-conic-gradient(
+    hsl(var(--muted)) 0% 25%,
+    hsl(var(--smui-surface-1)) 0% 50%
+  );
+  background-size: var(--checker-size, 16px) var(--checker-size, 16px);
+}

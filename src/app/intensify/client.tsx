@@ -8,12 +8,6 @@ import { getTool } from "@/lib/tools";
 
 const tool = getTool("intensify");
 
-const CHECKER: React.CSSProperties = {
-  backgroundImage:
-    "repeating-conic-gradient(hsl(var(--muted)) 0% 25%, hsl(var(--smui-surface-1)) 0% 50%)",
-  backgroundSize: "16px 16px",
-};
-
 /** Deterministic jitter so the preview and the encoded GIF match exactly. */
 function jitter(i: number, k: number) {
   const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453;
@@ -239,8 +233,9 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       <div>
         <Label>preview</Label>
         <div
-          className="flex items-center justify-center border border-border p-4"
-          style={bgMode === "transparent" ? CHECKER : undefined}
+          className={`flex items-center justify-center border border-border p-4 ${
+            bgMode === "transparent" ? "checkerboard" : ""
+          }`}
         >
           {img ? (
             <canvas

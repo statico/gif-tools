@@ -103,7 +103,9 @@ that exercise a real encode need generous timeouts.
 
 ## Deployment
 
-Cloudflare Pages, building with `npm run build` and publishing `out/`.
+Cloudflare Pages, building with `npm run build` and publishing `out/`, on
+Node 24 (pinned by `.node-version` — the postbuild imports `src/lib/tools.ts`
+directly and needs native TypeScript support).
 `public/_headers` sets the cache and content-type rules that get copied into
 the export; the postbuild appends a canonical `Link` header for every Markdown
 mirror. `functions/_middleware.js` is the one piece of server code: it serves

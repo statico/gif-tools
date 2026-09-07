@@ -5,16 +5,9 @@ import { Input, Label, Select } from "@/components/ui/field";
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { ffmpegOnce, paletteGifArgs, probe } from "@/lib/engines/ffmpeg";
 import { getTool } from "@/lib/tools";
+import { outExt } from "@/lib/format";
 
 const tool = getTool("crop");
-
-function outExt(name: string): string {
-  const e = name.split(".").pop()?.toLowerCase() ?? "";
-  if (e === "jpeg") return "jpg";
-  if (["gif", "png", "jpg", "webp", "bmp", "mp4", "webm"].includes(e)) return e;
-  if (["mov", "avi", "mkv", "m4v"].includes(e)) return "mp4";
-  return "gif";
-}
 
 const RATIOS: Record<string, number | null> = {
   free: null,
