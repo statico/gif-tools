@@ -149,3 +149,32 @@ for (const [fixture, wantTransparent] of [
     expect(flags.every((f) => Boolean(f & 1) === wantTransparent)).toBe(true);
   });
 }
+
+// Regression: the layout measured and centred text on measureText().width, the
+// advance box. Italic glyphs lean out of it, so the last letter was clipped by
+// the right edge while the left kept its full margin.
+test("italic text is centred on its ink, not its advance width", async ({ page }) => {
+  await page.goto("/text-emoji/");
+  await page.fill("#te-text", "hell yeah");
+  const italic = page.getByLabel("Italic");
+  if (!(await italic.isChecked())) await italic.check();
+
+  const gaps = await page
+    .locator("canvas")
+    .first()
+    .evaluate((c: HTMLCanvasElement) => {
+      const d = c.getContext("2d")!.getImageData(0, 0, c.width, c.height).data;
+      let min = c.width;
+      let max = -1;
+      for (let y = 0; y < c.height; y++)
+        for (let x = 0; x < c.width; x++)
+          if (d[(y * c.width + x) * 4 + 3] > 8) {
+            if (x < min) min = x;
+            if (x > max) max = x;
+          }
+      return { left: min, right: c.width - 1 - max };
+    });
+
+  expect(gaps.right).toBeGreaterThan(1);
+  expect(Math.abs(gaps.left - gaps.right)).toBeLessThanOrEqual(2);
+});

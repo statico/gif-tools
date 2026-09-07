@@ -41,3 +41,17 @@ export function formatBytes(n: number): string {
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
   return `${(n / 1024 / 1024).toFixed(2)} MB`;
 }
+
+/**
+ * Ink extents of text drawn with `textAlign: "center"`. `measureText().width`
+ * is the advance box, which italic glyphs lean out of on both sides, so both
+ * fitting and centring on it clipped the last letter. `dx` is how far the ink's
+ * centre sits from the drawing origin: draw at `-dx` to centre the ink itself.
+ */
+export function inkMetrics(m: TextMetrics): { w: number; dx: number } {
+  const l = m.actualBoundingBoxLeft;
+  const r = m.actualBoundingBoxRight;
+  const w = l + r;
+  // Fall back to the advance width if a browser leaves the ink box empty.
+  return w > 0 ? { w, dx: (r - l) / 2 } : { w: Math.max(1, m.width), dx: 0 };
+}
