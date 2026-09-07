@@ -71,6 +71,28 @@ test("imagemagick links against the wasm32 build", async ({ page }) => {
   await expect(page.getByText(/LinkError/i)).toHaveCount(0);
 });
 
+// Regression: a non-zero ffmpeg exec still creates its output file, and without
+// -y (or a cleanup that runs on failure) every later run of that tool died with
+// "File 'out.gif' already exists. Exiting." until the page was reloaded.
+test("a failed run does not wedge the tool", async ({ page }) => {
+  await page.goto("/reverse/");
+  await page.setInputFiles("#reverse-file", path.join(import.meta.dirname, "fixtures/broken.gif"));
+  await page.getByRole("button", { name: "Reverse", exact: true }).click();
+  // Not getByRole("alert"): Next ships an always-present empty route announcer
+  // with that role, so a bare alert query resolves before the run even fails.
+  await expect(page.getByText(/could not reverse this file/i)).toBeVisible({ timeout: 150_000 });
+
+  await page.setInputFiles("#reverse-file", GIF);
+  await page.getByRole("button", { name: "Reverse", exact: true }).click();
+  const download = page.getByRole("button", { name: /^download/i });
+  await expect(download).toBeEnabled({ timeout: 150_000 });
+
+  // The recovered run has to produce a real GIF, not just an enabled button.
+  const [saved] = await Promise.all([page.waitForEvent("download"), download.click()]);
+  const bytes = await fs.readFile(await saved.path());
+  expect(bytes.subarray(0, 6).toString()).toMatch(/^GIF8/);
+});
+
 // The only tool that emits a container rather than an image: fflate zips every
 // extracted frame, so a broken frame read shows up as a zip with no entries.
 test("split packs every frame into a downloadable ZIP", async ({ page }) => {
