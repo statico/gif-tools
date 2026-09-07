@@ -229,8 +229,8 @@ export const TOOLS: Tool[] = [
     name: "Number",
     title: "100-style number emoji generator",
     description:
-      "Generate 💯-style number emoji — any number, in the double-underlined red style or your own colours. Export a static PNG or an animated glowing GIF.",
-    blurb: "💯-style numbers in any value and colour.",
+      "Generate 100-style number emoji — any number, in the double-underlined red style or your own colours. Export a static PNG or an animated glowing GIF.",
+    blurb: "100-style numbers in any value and colour.",
     category: "emoji",
     engine: ["canvas"],
     keywords: ["100 emoji", "number emoji", "hundred emoji generator"],

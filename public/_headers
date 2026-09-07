@@ -1,0 +1,26 @@
+# Cloudflare Pages headers.
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+
+# The wasm engines are content-addressed by version and never change in place.
+/ffmpeg/*
+  Cache-Control: public, max-age=31536000, immutable
+/magick/*
+  Cache-Control: public, max-age=31536000, immutable
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# a14y wants the markdown mirrors served as real markdown, not octet-stream.
+/*.md
+  Content-Type: text/markdown; charset=utf-8
+/llms.txt
+  Content-Type: text/plain; charset=utf-8
+
+# Next emits the OG image with no file extension, so declare its type or
+# social scrapers get application/octet-stream and skip the card.
+/opengraph-image
+  Content-Type: image/png
+  Cache-Control: public, max-age=86400

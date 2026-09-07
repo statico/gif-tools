@@ -105,6 +105,17 @@ export function SiteFooter() {
         Everything runs in your browser with WebAssembly builds of ffmpeg, gifsicle and
         ImageMagick. Your files are never uploaded.
       </p>
+      <p className="text-label text-muted-foreground tracking-wider mt-2">
+        <Link href="/glossary/" className="hover:text-foreground underline underline-offset-2">
+          Glossary
+        </Link>
+        {" · "}
+        {/* Plain anchor: it's a static file, and next/link would prefetch it
+            as an RSC route and 404. */}
+        <a href="/sitemap.md" className="hover:text-foreground underline underline-offset-2">
+          Sitemap
+        </a>
+      </p>
     </footer>
   );
 }
