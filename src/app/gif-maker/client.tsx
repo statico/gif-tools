@@ -185,6 +185,7 @@ function Body({ setBusy, setProgress, setError, publish }: ToolBodyProps) {
           accept="image/png,image/jpeg,image/webp,image/gif"
           className="sr-only"
           id="gif-maker-files"
+          aria-label="Choose images to turn into GIF frames"
           onChange={(e) => {
             void addFiles(e.target.files);
             e.target.value = "";
