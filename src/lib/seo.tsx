@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { SITE } from "./site";
 import { getTool } from "./tools";
 
+const OG_IMAGE = { url: `${SITE.url}/opengraph-image`, width: 1200, height: 630, type: "image/png" };
+
 export function toolMetadata(slug: string): Metadata {
   const tool = getTool(slug);
   const url = `${SITE.url}/${slug}/`;
@@ -17,11 +19,15 @@ export function toolMetadata(slug: string): Metadata {
       title: tool.title,
       description: tool.description,
       locale: SITE.locale,
+      // Declaring openGraph here replaces the root's, so the site-wide
+      // opengraph-image has to be named again or tool pages share no card image.
+      images: [OG_IMAGE],
     },
     twitter: {
       card: "summary_large_image",
       title: tool.title,
       description: tool.description,
+      images: [OG_IMAGE],
     },
   };
 }
