@@ -37,6 +37,14 @@ interface ToolShellProps {
   requiresFile?: boolean;
   /** Default download filename stem. */
   defaultName?: string;
+  /**
+   * Live suggestion for the filename stem — generators pass the text the user
+   * is typing. It only overwrites the field while the user hasn't edited it
+   * themselves, so a deliberate name is never clobbered.
+   */
+  suggestedName?: string;
+  /** Extension shown in the filename hint before anything is generated. */
+  suggestedExt?: string;
   children: (props: ToolBodyProps) => React.ReactNode;
   /** Short usage note rendered under the heading. */
   hint?: React.ReactNode;
@@ -47,6 +55,8 @@ export function ToolShell({
   accept = "image/gif,image/png,image/jpeg,image/webp,video/*",
   requiresFile = true,
   defaultName,
+  suggestedName,
+  suggestedExt,
   children,
   hint,
 }: ToolShellProps) {
@@ -59,6 +69,7 @@ export function ToolShell({
   const [progress, setProgress] = React.useState(0);
   const [error, setError] = React.useState<string | null>(null);
   const [name, setName] = React.useState(defaultName ?? tool.slug);
+  const [nameEdited, setNameEdited] = React.useState(false);
   const [dragging, setDragging] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
@@ -66,6 +77,12 @@ export function ToolShell({
   // many runs don't pin every previous result in memory.
   React.useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
   React.useEffect(() => () => { if (sourceUrl) URL.revokeObjectURL(sourceUrl); }, [sourceUrl]);
+
+  React.useEffect(() => {
+    if (nameEdited) return;
+    const next = slugify(suggestedName ?? "", "");
+    if (next) setName(next);
+  }, [suggestedName, nameEdited]);
 
   const setBusy = React.useCallback((b: boolean, message?: string) => {
     setBusyState(b);
@@ -103,7 +120,10 @@ export function ToolShell({
       });
       // Seed the download name from the source so it stays recognisable.
       const stem = f.name.replace(/\.[^.]+$/, "");
-      if (stem) setName(slugify(stem, tool.slug));
+      if (stem) {
+        setName(slugify(stem, tool.slug));
+        setNameEdited(true);
+      }
     },
     [tool.slug],
   );
@@ -244,15 +264,18 @@ export function ToolShell({
                 id={`${tool.slug}-name`}
                 value={name}
                 spellCheck={false}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setNameEdited(true);
+                }}
                 aria-describedby={`${tool.slug}-name-hint`}
               />
               <span className="flex items-center text-ui text-muted-foreground">
-                .{result?.ext ?? "gif"}
+                .{result?.ext ?? suggestedExt ?? "gif"}
               </span>
             </div>
             <p id={`${tool.slug}-name-hint`} className="text-label text-muted-foreground mt-1">
-              Saved as <code className="text-foreground">{slugify(name, tool.slug)}.{result?.ext ?? "gif"}</code> — a
+              Saved as <code className="text-foreground">{slugify(name, tool.slug)}.{result?.ext ?? suggestedExt ?? "gif"}</code> — a
               valid Slack emoji name.
             </p>
           </div>

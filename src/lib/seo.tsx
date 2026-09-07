@@ -17,13 +17,11 @@ export function toolMetadata(slug: string): Metadata {
       title: tool.title,
       description: tool.description,
       locale: SITE.locale,
-      images: [{ url: `${SITE.url}/og.png`, width: 1200, height: 630, alt: tool.title }],
     },
     twitter: {
       card: "summary_large_image",
       title: tool.title,
       description: tool.description,
-      images: [`${SITE.url}/og.png`],
     },
   };
 }
