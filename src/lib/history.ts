@@ -93,7 +93,27 @@ async function makeThumbnail(blob: Blob, mime: string): Promise<string | undefin
   }
 }
 
-export async function addToHistory(
+/**
+ * The index is a read-modify-write over one localStorage key, and callers fire
+ * this without awaiting it, so two overlapping saves would both read the old
+ * index and the second write would drop the first record — leaving its blob in
+ * IndexedDB with nothing pointing at it. One chain, one writer at a time.
+ */
+let writes: Promise<unknown> = Promise.resolve();
+
+export function addToHistory(
+  entry: Omit<HistoryEntry, "id" | "createdAt" | "size" | "thumbnail">,
+  data: Uint8Array | Blob,
+): Promise<HistoryEntry | null> {
+  const next = writes.then(
+    () => save(entry, data),
+    () => save(entry, data),
+  );
+  writes = next.catch(() => {});
+  return next;
+}
+
+async function save(
   entry: Omit<HistoryEntry, "id" | "createdAt" | "size" | "thumbnail">,
   data: Uint8Array | Blob,
 ): Promise<HistoryEntry | null> {

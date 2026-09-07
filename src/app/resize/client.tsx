@@ -6,7 +6,8 @@ import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { ffmpegOnce, paletteGifArgs } from "@/lib/engines/ffmpeg";
 import { getTool } from "@/lib/tools";
 import { outExt } from "@/lib/format";
-import { useFirstFrame } from "@/lib/preview";
+import { NO_PREVIEW, useFirstFrame } from "@/lib/preview";
+import { clamp } from "@/lib/utils";
 
 const tool = getTool("resize");
 
@@ -22,7 +23,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   const [filter, setFilter] = React.useState("lanczos");
   // useFirstFrame decodes the file in the browser, so the source dimensions come
   // for free — probe() would boot the 32MB ffmpeg core just to read two numbers.
-  const { frame, size: src } = useFirstFrame(file);
+  const { frame, size: src, failed } = useFirstFrame(file);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
 
   React.useEffect(() => {
@@ -48,8 +49,8 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
 
   // Live preview at the exact output size — one CSS pixel per output pixel, so
   // a 64px result looks 64px small instead of filling the panel.
-  const tw = Math.max(1, Math.min(4000, target.w));
-  const th = Math.max(1, Math.min(4000, target.h));
+  const tw = clamp(Math.round(target.w), 1, 4000);
+  const th = clamp(Math.round(target.h), 1, 4000);
   React.useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
@@ -158,7 +159,9 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       <p className="text-ui text-muted-foreground" role="status" aria-live="polite">
         {src
           ? `Source ${src.w}×${src.h} → output ${tw}×${th}`
-          : "Choose a file to read its dimensions."}
+          : failed
+            ? NO_PREVIEW
+            : "Choose a file to read its dimensions."}
       </p>
 
       <div>
@@ -179,7 +182,9 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
               }}
             />
           ) : (
-            <p className="text-ui text-muted-foreground py-8">Choose a file to preview.</p>
+            <p className="text-ui text-muted-foreground py-8">
+              {failed ? NO_PREVIEW : "Choose a file to preview."}
+            </p>
           )}
         </div>
       </div>

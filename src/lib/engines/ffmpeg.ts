@@ -112,13 +112,20 @@ export async function runFFmpeg({
     };
     ff.on("progress", handler);
 
+    // Outputs are cleaned up whether or not the run succeeds: a non-zero exec
+    // can still have created the file, and ffmpeg refuses to overwrite it on
+    // the next run ("File 'out.mp4' already exists. Exiting."), which would
+    // wedge the tool until reload.
+    written.push(...outputs);
+
     try {
       for (const [name, data] of Object.entries(inputs)) {
         await ff.writeFile(name, await toBytes(data));
         written.push(name);
       }
 
-      const code = await ff.exec(args);
+      // -y: never stop to ask about an overwrite, there is no tty to answer.
+      const code = await ff.exec(["-y", ...args]);
       if (code !== 0) throw new Error(`ffmpeg exited with code ${code}`);
 
       const result: Record<string, Uint8Array> = {};
@@ -126,7 +133,6 @@ export async function runFFmpeg({
         const data = await ff.readFile(name);
         if (typeof data === "string") throw new Error(`expected binary output for ${name}`);
         result[name] = data as Uint8Array;
-        written.push(name);
       }
       onProgress?.(1);
       return result;

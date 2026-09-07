@@ -26,6 +26,15 @@ export function slugify(s: string, fallback = "output"): string {
   return out || fallback;
 }
 
+/**
+ * Math.min/max propagate NaN, and a number field the user has cleared reads as
+ * NaN, so an empty box would otherwise reach ffmpeg as `scale=NaN:270` or the
+ * GIF encoder as a zero delay. Anything non-finite falls back to the low bound.
+ */
+export function clamp(v: number, lo: number, hi: number): number {
+  return Number.isFinite(v) ? Math.min(Math.max(v, lo), hi) : lo;
+}
+
 export function formatBytes(n: number): string {
   if (!Number.isFinite(n) || n < 0) return "—";
   if (n < 1024) return `${n} B`;
