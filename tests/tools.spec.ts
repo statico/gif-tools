@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-const GIF = path.join(__dirname, "fixtures/sample.gif");
+const GIF = path.join(import.meta.dirname, "fixtures/sample.gif");
 
 // Real wasm encodes: the ffmpeg core alone is ~32MB, so these are slow by nature.
 test.describe.configure({ mode: "serial", timeout: 180_000 });
@@ -62,7 +62,7 @@ test("the ffmpeg worker loads its core and produces output", async ({ page }) =>
 // copying dist/x64/magick.wasm gives a LinkError at instantiation time.
 test("imagemagick links against the wasm32 build", async ({ page }) => {
   await page.goto("/compress/");
-  await page.setInputFiles("input[type=file]", path.join(__dirname, "fixtures/sample.png"));
+  await page.setInputFiles("input[type=file]", path.join(import.meta.dirname, "fixtures/sample.png"));
   await page.getByRole("button", { name: "Compress image", exact: true }).click();
 
   await expect(page.getByRole("button", { name: /^download/i })).toBeEnabled({
@@ -83,7 +83,7 @@ for (const [fixture, wantTransparent] of [
     page,
   }) => {
     await page.goto("/party/");
-    await page.setInputFiles("input[type=file]", path.join(__dirname, "fixtures", fixture));
+    await page.setInputFiles("input[type=file]", path.join(import.meta.dirname, "fixtures", fixture));
     await page.getByRole("button", { name: /party it up/i }).click();
 
     const download = page.getByRole("button", { name: /^download/i });
