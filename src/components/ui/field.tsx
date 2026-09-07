@@ -94,14 +94,13 @@ export function Checkbox({
   label,
   ...p
 }: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
-  const id = React.useId();
+  // The label wraps the box so the whole row is the hit target; a bare 16px
+  // checkbox is under the 24px touch minimum.
   return (
-    <div className="flex items-center gap-2">
-      <input id={id} type="checkbox" className={cn("size-4 accent-primary", className)} {...p} />
-      <label htmlFor={id} className="text-ui text-foreground select-none">
-        {label}
-      </label>
-    </div>
+    <label className="flex min-h-6 items-center gap-2 text-ui text-foreground select-none">
+      <input type="checkbox" className={cn("size-4 accent-primary", className)} {...p} />
+      {label}
+    </label>
   );
 }
 
