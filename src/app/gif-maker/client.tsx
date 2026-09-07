@@ -76,23 +76,26 @@ function Body({ setBusy, setProgress, setError, publish }: ToolBodyProps) {
         return;
       }
       setError(null);
-      try {
-        const added: Frame[] = [];
-        for (const f of files) {
-          const url = URL.createObjectURL(f);
+      // Keep whatever decoded: one bad file in a drop of ten used to throw the
+      // other nine away and strand their object URLs for the life of the tab.
+      const added: Frame[] = [];
+      const failed: string[] = [];
+      for (const f of files) {
+        const url = URL.createObjectURL(f);
+        try {
           added.push({
             id: `${f.name}-${Date.now()}-${Math.random()}`,
             name: f.name,
             url,
             img: await loadImage(f),
           });
+        } catch {
+          URL.revokeObjectURL(url);
+          failed.push(f.name);
         }
-        setFrames((prev) => [...prev, ...added]);
-      } catch (err) {
-        setError(
-          `Could not read one of those images: ${err instanceof Error ? err.message : String(err)}`,
-        );
       }
+      if (added.length) setFrames((prev) => [...prev, ...added]);
+      if (failed.length) setError(`Could not read ${failed.join(", ")}.`);
     },
     [setError],
   );

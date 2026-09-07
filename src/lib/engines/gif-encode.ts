@@ -28,8 +28,10 @@ export function encodeGif(
 
   frames.forEach((frame, i) => {
     const delay = Array.isArray(delayMs) ? delayMs[i] ?? delayMs[0] : delayMs;
-    // rgb565 keeps the palette small and is plenty for flat emoji art.
-    const format = transparent ? "rgba4444" : "rgb565";
+    // rgba4444 spends 4 of its bits on alpha, so it is only worth paying for
+    // when the frame actually has a transparent pixel — asking for transparency
+    // on a fully opaque frame used to cost two bits per channel and band it.
+    const format = transparent && hasAlpha(frame) ? "rgba4444" : "rgb565";
     const palette = quantize(frame.data, maxColors, { format });
     const index = applyPalette(frame.data, palette, format);
     // quantize only emits an alpha-0 entry when the frame actually has one, and
@@ -48,6 +50,13 @@ export function encodeGif(
 
   gif.finish();
   return gif.bytes();
+}
+
+/** Does any pixel need the alpha channel? Reads the alpha byte of each pixel. */
+function hasAlpha(frame: ImageData): boolean {
+  const d = frame.data;
+  for (let i = 3; i < d.length; i += 4) if (d[i] < 255) return true;
+  return false;
 }
 
 /** Render `count` frames by calling `draw` with a 0..1 progress value. */

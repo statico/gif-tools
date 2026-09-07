@@ -15,6 +15,7 @@ import { formatBytes } from "@/lib/utils";
 
 export default function HistoryClient() {
   const [entries, setEntries] = React.useState<HistoryEntry[] | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
   // Deleting unmounts the focused button, so focus has to be put somewhere.
   const headingRef = React.useRef<HTMLParagraphElement>(null);
   const refocus = React.useRef(false);
@@ -62,11 +63,25 @@ export default function HistoryClient() {
 
   const save = async (entry: HistoryEntry) => {
     const blob = await getBlob(entry.id);
-    if (blob) download(blob, entry.filename, entry.mime);
+    // The index lives in localStorage and the bytes in IndexedDB; clearing one
+    // without the other leaves a row whose file is gone. Say so rather than
+    // having the button do nothing at all.
+    if (!blob) {
+      setError(`The file for ${entry.filename} is no longer stored in this browser.`);
+      return;
+    }
+    setError(null);
+    download(blob, entry.filename, entry.mime);
   };
 
   return (
     <>
+      {error ? (
+        <p role="alert" className="text-ui text-destructive mb-3">
+          {error}
+        </p>
+      ) : null}
+
       <div className="flex items-center justify-between mb-3">
         <p
           ref={headingRef}
