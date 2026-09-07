@@ -3,9 +3,10 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox, Input, Label, Select } from "@/components/ui/field";
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
-import { ffmpegOnce, paletteGifArgs, probe } from "@/lib/engines/ffmpeg";
+import { ffmpegOnce, paletteGifArgs } from "@/lib/engines/ffmpeg";
 import { getTool } from "@/lib/tools";
 import { outExt } from "@/lib/format";
+import { useFirstFrame } from "@/lib/preview";
 
 const tool = getTool("resize");
 
@@ -13,42 +14,23 @@ const VIDEO = ["mp4", "webm"];
 
 function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) {
   const run = useRun({ setBusy, setError, setProgress });
-  const [src, setSrc] = React.useState<{ w: number; h: number } | null>(null);
   const [mode, setMode] = React.useState<"pixels" | "percent">("pixels");
   const [width, setWidth] = React.useState(480);
   const [height, setHeight] = React.useState(270);
   const [percent, setPercent] = React.useState(50);
   const [lock, setLock] = React.useState(true);
   const [filter, setFilter] = React.useState("lanczos");
+  // useFirstFrame decodes the file in the browser, so the source dimensions come
+  // for free — probe() would boot the 32MB ffmpeg core just to read two numbers.
+  const { frame, size: src } = useFirstFrame(file);
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
 
   React.useEffect(() => {
-    if (!file) {
-      setSrc(null);
-      return;
+    if (src) {
+      setWidth(src.w);
+      setHeight(src.h);
     }
-    let stale = false;
-    setBusy(true, "Reading dimensions");
-    probe(file)
-      .then((info) => {
-        if (stale) return;
-        if (!info.width || !info.height) {
-          setError("Could not read the dimensions of that file. Try a GIF, image or video.");
-          return;
-        }
-        setSrc({ w: info.width, h: info.height });
-        setWidth(info.width);
-        setHeight(info.height);
-      })
-      .catch((e: unknown) => {
-        if (!stale) setError(e instanceof Error ? e.message : "Could not read that file.");
-      })
-      .finally(() => {
-        if (!stale) setBusy(false);
-      });
-    return () => {
-      stale = true;
-    };
-  }, [file, setBusy, setError]);
+  }, [src]);
 
   const onWidth = (v: number) => {
     setWidth(v);
@@ -64,6 +46,22 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       ? { w: Math.round((src.w * percent) / 100), h: Math.round((src.h * percent) / 100) }
       : { w: width, h: height };
 
+  // Live preview at the exact output size — one CSS pixel per output pixel, so
+  // a 64px result looks 64px small instead of filling the panel.
+  const tw = Math.max(1, Math.min(4000, target.w));
+  const th = Math.max(1, Math.min(4000, target.h));
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx || !frame) return;
+    canvas.width = tw;
+    canvas.height = th;
+    ctx.clearRect(0, 0, tw, th);
+    ctx.imageSmoothingEnabled = filter !== "neighbor";
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(frame, 0, 0, tw, th);
+  }, [frame, tw, th, filter]);
+
   const go = () =>
     run("Resizing", async () => {
       if (!file) throw new Error("Choose a file first.");
@@ -71,11 +69,8 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       const ext = outExt(file.name);
       const isVideo = VIDEO.includes(ext);
       // Video encoders need even dimensions; GIF and stills don't care.
-      const w = isVideo ? Math.max(2, target.w - (target.w % 2)) : Math.max(1, target.w);
-      const h = isVideo ? Math.max(2, target.h - (target.h % 2)) : Math.max(1, target.h);
-      if (!Number.isFinite(w) || !Number.isFinite(h) || w < 1 || h < 1) {
-        throw new Error("Width and height must both be at least 1 pixel.");
-      }
+      const w = isVideo ? Math.max(2, tw - (tw % 2)) : tw;
+      const h = isVideo ? Math.max(2, th - (th % 2)) : th;
       const scale = `scale=${w}:${h}:flags=${filter}`;
       const onProgress = (r: number) => setProgress(r);
       const out = await ffmpegOnce(
@@ -162,9 +157,32 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
 
       <p className="text-ui text-muted-foreground" role="status" aria-live="polite">
         {src
-          ? `Source ${src.w}×${src.h} → output ${Math.max(1, target.w)}×${Math.max(1, target.h)}`
+          ? `Source ${src.w}×${src.h} → output ${tw}×${th}`
           : "Choose a file to read its dimensions."}
       </p>
+
+      <div>
+        <span className="text-label text-muted-foreground tracking-[1.5px] uppercase block mb-1">
+          preview at output size
+        </span>
+        <div className="checkerboard flex max-h-80 items-center justify-center overflow-auto border border-border p-4">
+          {frame ? (
+            <canvas
+              ref={canvasRef}
+              role="img"
+              aria-label={`Preview of the resized output at ${tw} by ${th} pixels`}
+              className="block shrink-0"
+              style={{
+                width: tw,
+                height: th,
+                imageRendering: filter === "neighbor" ? "pixelated" : "auto",
+              }}
+            />
+          ) : (
+            <p className="text-ui text-muted-foreground py-8">Choose a file to preview.</p>
+          )}
+        </div>
+      </div>
 
       <Button onClick={go} disabled={!file || !src}>
         Resize

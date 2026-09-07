@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import fs from "node:fs/promises";
 import path from "node:path";
 
 const GIF = path.join(__dirname, "fixtures/sample.gif");
@@ -68,3 +69,34 @@ test("imagemagick links against the wasm32 build", async ({ page }) => {
   });
   await expect(page.getByText(/LinkError/i)).toHaveCount(0);
 });
+
+// Regression: encodeGif used to flag palette index 0 transparent unconditionally,
+// so an opaque source got holes punched wherever its darkest colour appeared.
+// Byte 3 of each Graphic Control Extension (21 F9 04 <flags>) has the
+// transparency bit in position 0; on an opaque source it must be clear.
+for (const [fixture, wantTransparent] of [
+  ["opaque.png", false],
+  ["alpha.png", true],
+] as const) {
+  test(`party ${wantTransparent ? "keeps" : "does not invent"} transparency for ${fixture}`, async ({
+    page,
+  }) => {
+    await page.goto("/party/");
+    await page.setInputFiles("input[type=file]", path.join(__dirname, "fixtures", fixture));
+    await page.getByRole("button", { name: /party it up/i }).click();
+
+    const download = page.getByRole("button", { name: /^download/i });
+    await expect(download).toBeEnabled({ timeout: 60_000 });
+    const [saved] = await Promise.all([page.waitForEvent("download"), download.click()]);
+
+    const bytes = await fs.readFile(await saved.path());
+    const flags: number[] = [];
+    for (let i = 0; i < bytes.length - 3; i++) {
+      if (bytes[i] === 0x21 && bytes[i + 1] === 0xf9 && bytes[i + 2] === 0x04) {
+        flags.push(bytes[i + 3]);
+      }
+    }
+    expect(flags.length).toBeGreaterThan(0);
+    expect(flags.every((f) => Boolean(f & 1) === wantTransparent)).toBe(true);
+  });
+}

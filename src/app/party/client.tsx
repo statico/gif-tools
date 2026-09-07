@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Input, Label, Range, Select } from "@/components/ui/field";
+import { ColorField, Label, Range, Select } from "@/components/ui/field";
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { encodeGif, loadImage, renderFrames } from "@/lib/engines/gif-encode";
 import { getTool } from "@/lib/tools";
@@ -61,12 +61,7 @@ function frameColor(i: number, s: Settings): [number, number] {
   return [h, sat];
 }
 
-function drawFrame(
-  ctx: CanvasRenderingContext2D,
-  img: HTMLImageElement,
-  i: number,
-  s: Settings,
-) {
+function drawFrame(ctx: CanvasRenderingContext2D, img: HTMLImageElement, i: number, s: Settings) {
   const { size } = s;
   ctx.globalCompositeOperation = "source-over";
   ctx.clearRect(0, 0, size, size);
@@ -123,11 +118,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   const [img, setImg] = React.useState<HTMLImageElement | null>(null);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
 
-  const ok = (v: string) => /^#[0-9a-fA-F]{6}$/.test(v);
-  const safeFrom = ok(from) ? from : "#ff2d95";
-  const safeTo = ok(to) ? to : "#00e5ff";
-  const safeBg = ok(bg) ? bg : "#ffffff";
-
   const settings: Settings = {
     size,
     frames,
@@ -135,9 +125,9 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
     palette,
     mode,
     threshold,
-    from: safeFrom,
-    to: safeTo,
-    bg: bgMode === "color" ? safeBg : null,
+    from,
+    to,
+    bg: bgMode === "color" ? bg : null,
   };
 
   React.useEffect(() => {
@@ -175,7 +165,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [img, size, frames, delay, palette, mode, threshold, safeFrom, safeTo, bgMode, safeBg]);
+  }, [img, size, frames, delay, palette, mode, threshold, from, to, bgMode, bg]);
 
   const go = () =>
     run("Partying", async () => {
@@ -222,36 +212,8 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
 
       {palette === "custom" ? (
         <div className="grid gap-4 sm:grid-cols-2">
-          {(
-            [
-              ["party-from", "from colour", from, safeFrom, setFrom],
-              ["party-to", "to colour", to, safeTo, setTo],
-            ] as const
-          ).map(([id, label, raw, safe, set]) => (
-            <div key={id} className="flex items-end gap-2">
-              <div className="w-20">
-                <Label htmlFor={id}>{label}</Label>
-                <Input
-                  id={id}
-                  type="color"
-                  value={safe}
-                  onChange={(e) => set(e.target.value)}
-                  className="p-1"
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <Label htmlFor={`${id}-hex`}>hex</Label>
-                <Input
-                  id={`${id}-hex`}
-                  value={raw}
-                  spellCheck={false}
-                  pattern="#[0-9a-fA-F]{6}"
-                  aria-invalid={raw !== safe}
-                  onChange={(e) => set(e.target.value.trim())}
-                />
-              </div>
-            </div>
-          ))}
+          <ColorField id="party-from" label="from colour" value={from} onChange={setFrom} />
+          <ColorField id="party-to" label="to colour" value={to} onChange={setTo} />
         </div>
       ) : null}
 
@@ -310,29 +272,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
           </Select>
         </div>
         {bgMode === "color" ? (
-          <div className="flex items-end gap-2">
-            <div className="w-20">
-              <Label htmlFor="party-bg-color">colour</Label>
-              <Input
-                id="party-bg-color"
-                type="color"
-                value={safeBg}
-                onChange={(e) => setBg(e.target.value)}
-                className="p-1"
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <Label htmlFor="party-bg-hex">hex</Label>
-              <Input
-                id="party-bg-hex"
-                value={bg}
-                spellCheck={false}
-                pattern="#[0-9a-fA-F]{6}"
-                aria-invalid={bg !== safeBg}
-                onChange={(e) => setBg(e.target.value.trim())}
-              />
-            </div>
-          </div>
+          <ColorField id="party-bg-color" label="colour" value={bg} onChange={setBg} />
         ) : null}
       </div>
 

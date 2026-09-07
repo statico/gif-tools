@@ -56,6 +56,32 @@ export function toolJsonLd(slug: string) {
   };
 }
 
+/** WebPage + BreadcrumbList JSON-LD for a plain page (glossary, history). */
+export function pageJsonLd(slug: string, name: string, description: string, extra?: object) {
+  const url = `${SITE.url}/${slug}/`;
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        name,
+        url,
+        description,
+        isPartOf: { "@type": "WebSite", name: SITE.name, url: `${SITE.url}/` },
+        dateModified: new Date().toISOString(),
+        ...extra,
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: SITE.name, item: `${SITE.url}/` },
+          { "@type": "ListItem", position: 2, name, item: url },
+        ],
+      },
+    ],
+  };
+}
+
 export function JsonLd({ data }: { data: unknown }) {
   return (
     <script

@@ -114,6 +114,12 @@ export function ToolShell({
       setFile(f);
       setResult(null);
       setError(null);
+      // The old result's preview URL outlives `result`, so without this the panel
+      // keeps showing file A's image under a blank extension and a dead button.
+      setPreviewUrl((old) => {
+        if (old) URL.revokeObjectURL(old);
+        return null;
+      });
       setSourceUrl((old) => {
         if (old) URL.revokeObjectURL(old);
         return URL.createObjectURL(f);
@@ -129,6 +135,8 @@ export function ToolShell({
   );
 
   const resultMime = result ? result.mime ?? mimeFor(`x.${result.ext}`) : null;
+  const sourceSize = useMediaSize(sourceUrl, file?.type ?? null);
+  const resultSize = useMediaSize(previewUrl, resultMime);
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] items-start">
@@ -157,14 +165,17 @@ export function ToolShell({
                   accept={accept}
                   className="sr-only"
                   id={`${tool.slug}-file`}
+                  aria-label={`Choose a file for ${tool.name}`}
                   onChange={(e) => onPick(e.target.files?.[0] ?? null)}
                 />
                 <Upload className="mx-auto mb-2 size-5 text-muted-foreground" aria-hidden="true" />
                 <p className="text-ui text-foreground mb-1">
                   {file ? file.name : "Drop a file here"}
                 </p>
-                <p className="text-label text-muted-foreground mb-3">
-                  {file ? formatBytes(file.size) : "or choose one — nothing leaves your device"}
+                <p className="text-label text-muted-foreground mb-3 tabular-nums">
+                  {file
+                    ? stats(sourceSize, file.name.split(".").pop() ?? "", file.size)
+                    : "or choose one — nothing leaves your device"}
                 </p>
                 <Button variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
                   {file ? "Choose another" : "Choose file"}
@@ -218,7 +229,7 @@ export function ToolShell({
             role="status"
             aria-live="polite"
             aria-busy={busy}
-            className="min-h-40 flex items-center justify-center border border-border bg-smui-surface-0 p-3"
+            className="min-h-40 flex flex-col items-center justify-center gap-2 border border-border bg-smui-surface-0 p-3"
           >
             {busy ? (
               <div className="text-center">
@@ -245,6 +256,12 @@ export function ToolShell({
                 Nothing yet. {requiresFile ? "Pick a file and run the tool." : "Run the tool."}
               </p>
             )}
+            {result && !busy ? (
+              <p className="text-label text-muted-foreground tabular-nums text-center">
+                {stats(resultSize, result.ext, result.data.length)}
+                {result.note ? ` · ${result.note}` : ""}
+              </p>
+            ) : null}
           </div>
 
           {error ? (
@@ -301,7 +318,13 @@ export function ToolShell({
                 variant="outline"
                 size="icon"
                 aria-label="Clear result"
-                onClick={() => { setResult(null); setPreviewUrl(null); }}
+                onClick={() => {
+                  setResult(null);
+                  setPreviewUrl((old) => {
+                    if (old) URL.revokeObjectURL(old);
+                    return null;
+                  });
+                }}
               >
                 <RotateCcw aria-hidden="true" />
               </Button>
@@ -314,6 +337,40 @@ export function ToolShell({
 }
 
 /** Wraps a tool action with busy/error plumbing so pages don't repeat it. */
+/**
+ * Natural pixel size of whatever is at `url`. Images and videos both report it,
+ * just under different property names, and neither is known until it decodes.
+ */
+function useMediaSize(url: string | null, mime: string | null) {
+  const [size, setSize] = React.useState<{ w: number; h: number } | null>(null);
+  React.useEffect(() => {
+    setSize(null);
+    if (!url || !mime) return;
+    let live = true;
+    if (mime.startsWith("video/")) {
+      const v = document.createElement("video");
+      v.preload = "metadata";
+      v.onloadedmetadata = () => live && setSize({ w: v.videoWidth, h: v.videoHeight });
+      v.src = url;
+    } else if (mime.startsWith("image/")) {
+      const i = new Image();
+      i.onload = () => live && setSize({ w: i.naturalWidth, h: i.naturalHeight });
+      i.src = url;
+    }
+    return () => {
+      live = false;
+    };
+  }, [url, mime]);
+  return size;
+}
+
+/** "128 × 128 · GIF · 25.2 KB", skipping the parts that aren't known yet. */
+function stats(size: { w: number; h: number } | null, ext: string, bytes: number) {
+  return [size && `${size.w} × ${size.h}`, ext.toUpperCase(), formatBytes(bytes)]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 export function useRun(props: Pick<ToolBodyProps, "setBusy" | "setError" | "setProgress">) {
   const { setBusy, setError, setProgress } = props;
   return React.useCallback(

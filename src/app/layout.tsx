@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   title: { default: SITE.title, template: `%s — ${SITE.name}` },
   description: SITE.description,
   applicationName: SITE.name,
-  alternates: { canonical: `${SITE.url}/` },
+  alternates: { canonical: `${SITE.url}/`, types: { "text/markdown": `${SITE.url}/index.md` } },
   robots: { index: true, follow: true },
   openGraph: {
     type: "website",
@@ -42,9 +42,6 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning className={mono.variable}>
-      <head>
-        <link rel="alternate" type="text/markdown" href={`${SITE.url}/index.md`} />
-      </head>
       <body>
         <ThemeProvider>
           <a

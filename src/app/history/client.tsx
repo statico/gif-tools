@@ -15,8 +15,17 @@ import { formatBytes } from "@/lib/utils";
 
 export default function HistoryClient() {
   const [entries, setEntries] = React.useState<HistoryEntry[] | null>(null);
+  // Deleting unmounts the focused button, so focus has to be put somewhere.
+  const headingRef = React.useRef<HTMLParagraphElement>(null);
+  const refocus = React.useRef(false);
 
   const refresh = React.useCallback(() => setEntries(readIndex()), []);
+
+  React.useEffect(() => {
+    if (!refocus.current) return;
+    refocus.current = false;
+    headingRef.current?.focus();
+  }, [entries]);
 
   React.useEffect(() => {
     refresh();
@@ -42,7 +51,7 @@ export default function HistoryClient() {
     return (
       <Card>
         <CardContent>
-          <p className="text-ui text-muted-foreground">
+          <p ref={headingRef} tabIndex={-1} className="text-ui text-muted-foreground">
             Nothing here yet. Anything you make with a tool on this site shows up here
             automatically.
           </p>
@@ -59,7 +68,11 @@ export default function HistoryClient() {
   return (
     <>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-label text-muted-foreground tracking-wider uppercase">
+        <p
+          ref={headingRef}
+          tabIndex={-1}
+          className="text-label text-muted-foreground tracking-wider uppercase"
+        >
           {entries.length} item{entries.length === 1 ? "" : "s"}
         </p>
         <Button
@@ -67,6 +80,7 @@ export default function HistoryClient() {
           size="sm"
           onClick={async () => {
             await clearHistory();
+            refocus.current = true;
             refresh();
           }}
         >
@@ -122,6 +136,7 @@ export default function HistoryClient() {
                       aria-label={`Delete ${e.filename}`}
                       onClick={async () => {
                         await removeFromHistory(e.id);
+                        refocus.current = true;
                         refresh();
                       }}
                     >

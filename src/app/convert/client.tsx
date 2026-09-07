@@ -1,9 +1,10 @@
 "use client";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Checkbox, Label, Range, Select } from "@/components/ui/field";
+import { Checkbox, Label, Range, Readout, Select } from "@/components/ui/field";
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { ffmpegOnce, paletteGifArgs } from "@/lib/engines/ffmpeg";
+import { useFirstFrame } from "@/lib/preview";
 import { getTool } from "@/lib/tools";
 
 const tool = getTool("convert");
@@ -28,10 +29,36 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   const [colors, setColors] = React.useState(256);
   const [animate, setAnimate] = React.useState(true);
 
+  // Dimensions come from the browser decode useFirstFrame already does; probe()
+  // would boot the 32MB ffmpeg core just to read two numbers.
+  const { size: source } = useFirstFrame(file);
+
   const spec = TARGETS.find((t) => t.value === target)!;
   // Only offer to keep animation when both sides could actually have it.
   const canAnimate = spec.animated && !!file && ANIMATED_SOURCES.test(file.name);
   const keepAnimation = canAnimate && animate;
+  // No scale filter anywhere in this tool, so the pixels come out as they went in.
+  const size = source ? `${source.w} × ${source.h} px` : file ? "reading…" : "—";
+  const qualityWords =
+    quality >= 90
+      ? "near-lossless, largest file"
+      : quality >= 70
+        ? "sharp detail"
+        : quality >= 45
+          ? "visible softening"
+          : "small file, blocky";
+  const readout: [string, string][] = [
+    ["size", size],
+    ["format", `.${target}`],
+    [
+      "animation",
+      keepAnimation ? "kept if the source has more than one frame" : "first frame only",
+    ],
+  ];
+  if (spec.quality) readout.push(["quality", `${quality} — ${qualityWords}`]);
+  // The single-frame GIF path has no palettegen stage, so `colors` does nothing there.
+  else if (target === "gif")
+    readout.push(["colors", keepAnimation ? `up to ${colors}` : "not used for one frame"]);
 
   const go = () =>
     run(`Converting to ${target.toUpperCase()}`, async () => {
@@ -53,7 +80,17 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
                 : ["-i", input, "-frames:v", "1", "-f", "gif", output];
             case "webp":
               return keepAnimation
-                ? ["-i", input, "-c:v", "libwebp_anim", "-loop", "0", "-quality", String(quality), output]
+                ? [
+                    "-i",
+                    input,
+                    "-c:v",
+                    "libwebp_anim",
+                    "-loop",
+                    "0",
+                    "-quality",
+                    String(quality),
+                    output,
+                  ]
                 : ["-i", input, ...still, "-c:v", "libwebp", "-quality", String(quality), output];
             case "apng":
               return keepAnimation
@@ -127,6 +164,8 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
             : `${target.toUpperCase()} is a still format — only the first frame is kept.`}
         </p>
       )}
+
+      <Readout rows={readout} />
 
       <Button onClick={go} disabled={!file}>
         Convert to {target.toUpperCase()}

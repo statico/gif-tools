@@ -3,10 +3,12 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Label, Select } from "@/components/ui/field";
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
-import { ffmpegOnce, paletteGifArgs } from "@/lib/engines/ffmpeg";
+import { ffmpegOnce, paletteGifArgs, probe } from "@/lib/engines/ffmpeg";
 import { getTool } from "@/lib/tools";
 
 const tool = getTool("reverse");
+
+const secs = (v: number) => `${v.toFixed(2)}s`;
 
 function outputExt(file: File): "gif" | "webm" | "mp4" {
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
@@ -25,6 +27,29 @@ const BOOMERANG =
 function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) {
   const run = useRun({ setBusy, setError, setProgress });
   const [mode, setMode] = React.useState<"reverse" | "boomerang">("reverse");
+  const [duration, setDuration] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    if (!file) {
+      setDuration(null);
+      return;
+    }
+    let stale = false;
+    setBusy(true, "Reading duration");
+    probe(file)
+      .then((info) => {
+        if (!stale) setDuration(info.durationSec);
+      })
+      .catch(() => {
+        if (!stale) setDuration(null);
+      })
+      .finally(() => {
+        if (!stale) setBusy(false);
+      });
+    return () => {
+      stale = true;
+    };
+  }, [file, setBusy]);
 
   const go = () =>
     run(mode === "boomerang" ? "Building boomerang" : "Reversing", async () => {
@@ -63,6 +88,21 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       publish({ data: out, ext, note: mode });
     });
 
+  // Reverse keeps every frame, so the length is unchanged. Boomerang appends
+  // the reversed copy minus its first frame (trim=start_frame=1), so it plays
+  // 2n-1 frames: twice the length, one frame short.
+  const headline = duration
+    ? mode === "boomerang"
+      ? `${secs(duration)} \u2192 ${secs(duration * 2)} (one frame less)`
+      : `${secs(duration)} \u2192 ${secs(duration)}`
+    : mode === "boomerang"
+      ? "Roughly twice the source length"
+      : "Same length as the source";
+  const detail =
+    mode === "boomerang"
+      ? "Forward, then backwards: about twice the frames, minus the duplicated turnaround frame."
+      : "Every frame is kept, played back to front: same frame count, same length.";
+
   return (
     <>
       <div>
@@ -81,6 +121,16 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
         Reversing has to load every frame into memory at once, so very long or very large inputs can
         run out of memory and fail. Cut the clip down first if that happens.
       </p>
+
+      <div
+        role="status"
+        aria-live="polite"
+        className="border border-border bg-smui-surface-0 p-3 grid gap-1"
+      >
+        <span className="text-label uppercase tracking-wider text-muted-foreground">result</span>
+        <p className="text-ui text-foreground tabular-nums">{headline}</p>
+        <p className="text-label text-muted-foreground tabular-nums">{detail}</p>
+      </div>
 
       <Button onClick={go} disabled={!file}>
         {mode === "boomerang" ? "Make boomerang" : "Reverse"}
