@@ -27,7 +27,7 @@ export function encodeGif(
   const { width, height } = frames[0];
 
   frames.forEach((frame, i) => {
-    const delay = Array.isArray(delayMs) ? delayMs[i] ?? delayMs[0] : delayMs;
+    const delay = Array.isArray(delayMs) ? (delayMs[i] ?? delayMs[0]) : delayMs;
     // rgba4444 spends 4 of its bits on alpha, so it is only worth paying for
     // when the frame actually has a transparent pixel — asking for transparency
     // on a fully opaque frame used to cost two bits per channel and band it.

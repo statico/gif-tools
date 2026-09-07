@@ -4,7 +4,9 @@ export function download(data: Uint8Array | Blob, filename: string, mime?: strin
   const blob =
     data instanceof Blob
       ? data
-      : new Blob([data.slice().buffer as ArrayBuffer], { type: mime ?? "application/octet-stream" });
+      : new Blob([data.slice().buffer as ArrayBuffer], {
+          type: mime ?? "application/octet-stream",
+        });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

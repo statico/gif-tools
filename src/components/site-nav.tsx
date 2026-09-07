@@ -79,7 +79,10 @@ export function SiteNav() {
               <ul className="grid grid-cols-2 gap-x-3 gap-y-1.5">
                 {TOOLS.filter((t) => t.category === c).map((t) => (
                   <li key={t.slug}>
-                    <Link href={`/${t.slug}/`} className="text-ui text-foreground hover:text-primary">
+                    <Link
+                      href={`/${t.slug}/`}
+                      className="text-ui text-foreground hover:text-primary"
+                    >
                       {t.name}
                     </Link>
                   </li>
@@ -102,8 +105,8 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-border mt-16 px-4 sm:px-6 py-6">
       <p className="text-label text-muted-foreground tracking-wider">
-        Everything runs in your browser with WebAssembly builds of ffmpeg, gifsicle and
-        ImageMagick. Your files are never uploaded.
+        Everything runs in your browser with WebAssembly builds of ffmpeg, gifsicle and ImageMagick.
+        Your files are never uploaded.
       </p>
       <p className="text-label text-muted-foreground tracking-wider mt-2">
         <Link href="/glossary/" className="hover:text-foreground underline underline-offset-2">

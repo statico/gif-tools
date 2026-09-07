@@ -19,7 +19,10 @@ export interface Tool {
 }
 
 export const CATEGORIES: Record<ToolCategory, { label: string; description: string }> = {
-  convert: { label: "convert", description: "Move between video, GIF, WebP, APNG and still images." },
+  convert: {
+    label: "convert",
+    description: "Move between video, GIF, WebP, APNG and still images.",
+  },
   edit: { label: "edit", description: "Resize, crop, trim, rotate, caption and apply effects." },
   optimize: { label: "optimize", description: "Shrink files without wrecking them." },
   emoji: { label: "emoji", description: "Slack-ready animated emoji and text generators." },
@@ -240,8 +243,8 @@ export const TOOLS: Tool[] = [
     name: "Text Emoji",
     title: "Square text emoji generator for Slack",
     description:
-      "Turn short phrases like \"yes\", \"nope\" or \"hell yeah\" into square, legible Slack emoji. Auto-wraps onto multiple lines and ships a range of ready-made styles.",
-    blurb: "\"hell yeah\" as a square, readable 128px emoji.",
+      'Turn short phrases like "yes", "nope" or "hell yeah" into square, legible Slack emoji. Auto-wraps onto multiple lines and ships a range of ready-made styles.',
+    blurb: '"hell yeah" as a square, readable 128px emoji.',
     category: "emoji",
     engine: ["canvas"],
     keywords: ["text emoji generator", "slack text emoji", "square emoji", "word emoji"],

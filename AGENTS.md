@@ -1,12 +1,11 @@
-# AGENTS.md — gif.statico.io
+# AGENTS.md — statico's GIF tools
 
 ## Overview
 
-gif.statico.io is a static, client-side GIF toolkit. It reproduces most of what
-a hosted GIF editor does, plus a set of Slack emoji generators, without a backend. Every
-transformation runs in the visitor's browser through WebAssembly builds of
-ffmpeg, gifsicle and ImageMagick, or through the Canvas 2D API. No file is ever
-uploaded, and there is no API to call.
+statico's GIF tools is a static, client-side GIF toolkit, served at
+gif.statico.io. Every transformation runs in the visitor's browser through
+WebAssembly builds of ffmpeg, gifsicle and ImageMagick, or through the Canvas
+2D API. No file is ever uploaded, and there is no API to call.
 
 The site is a Next.js App Router project exported to static HTML
 (`output: "export"`) and hosted on Cloudflare Pages.
@@ -14,13 +13,13 @@ The site is a Next.js App Router project exported to static HTML
 ## Installation
 
 ```bash
-npm install
-npm run dev     # http://localhost:3000
+pnpm install
+pnpm dev        # http://localhost:3000
 ```
 
-`npm install` and `npm run dev` both need a writable npm cache. This repo's
-`.npmrc` points the cache at a local directory because the default
-`~/.npm` is not writable in every sandbox.
+pnpm is the package manager (pinned by `packageManager` in `package.json`).
+`pnpm-workspace.yaml` sets `minimumReleaseAge`, so a release younger than a
+week will not install.
 
 `predev` and `prebuild` copy the WebAssembly binaries out of `node_modules`
 into `public/` (`scripts/copy-wasm.mjs`), so they are served same-origin.
@@ -34,13 +33,14 @@ lives in `src/lib/tools.ts` and is mirrored at `/llms.txt` and `/sitemap.md`.
 
 ## Commands
 
-| Command | What it does |
-|---|---|
-| `npm run dev` | Dev server on port 3000. |
-| `npm run build` | Static export to `out/`, then generates the agent files. |
-| `npm run start` | Serves the built `out/` directory. |
-| `npm test` | Playwright end-to-end tests. |
-| `npx tsc --noEmit` | Type check. |
+| Command           | What it does                                                                           |
+| ----------------- | -------------------------------------------------------------------------------------- |
+| `pnpm dev`        | Dev server on port 3000.                                                               |
+| `pnpm build`      | Static export to `out/`, then generates the agent files.                               |
+| `pnpm start`      | Serves the built `out/` directory.                                                     |
+| `pnpm test`       | Playwright end-to-end tests.                                                           |
+| `pnpm typecheck`  | Type check.                                                                            |
+| `pnpm run deploy` | Build and upload to Cloudflare Pages. `run` is required: pnpm has a built-in `deploy`. |
 
 ## Architecture
 
@@ -94,8 +94,8 @@ its result. Tools should not reimplement any of that.
 Playwright drives a real browser against the built site:
 
 ```bash
-npm run build
-npm test
+pnpm build
+pnpm test
 ```
 
 The WebAssembly engines are large (the ffmpeg core alone is ~32MB), so tests
@@ -103,7 +103,7 @@ that exercise a real encode need generous timeouts.
 
 ## Deployment
 
-Cloudflare Pages, building with `npm run build` and publishing `out/`, on
+Cloudflare Pages, building with `pnpm build` and publishing `out/`, on
 Node 24 (pinned by `.node-version` — the postbuild imports `src/lib/tools.ts`
 directly and needs native TypeScript support).
 `public/_headers` sets the cache and content-type rules that get copied into
@@ -115,13 +115,13 @@ the static asset on any error.
 ## Agent readability
 
 Audited with [a14y.dev](https://a14y.dev): **100/100** site-wide and **94/100**
-page-mode against scorecard 0.2.0 (`npx a14y check <url> --mode site`). The two
+page-mode against scorecard 0.2.0 (`pnpm dlx a14y check <url> --mode site`). The two
 page-mode failures are local-server artefacts — `npx serve` applies neither
 `_headers` nor Pages Functions, so the canonical `Link` header and Markdown
 content negotiation only take effect on Cloudflare Pages. Re-run against the
 deployed URL to confirm.
 
-`npm run build` regenerates `llms.txt`, `index.md`, `sitemap.md`, a `.md`
+`pnpm build` regenerates `llms.txt`, `index.md`, `sitemap.md`, a `.md`
 mirror for every tool page, and a served copy of this file, all from the tool
 registry (`scripts/gen-agent-files.mjs`). If you change a tool's name or
 description, rebuild rather than editing the generated Markdown by hand.

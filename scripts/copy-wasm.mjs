@@ -31,7 +31,9 @@ for (const [rel, dest] of jobs) {
 const STUB = `function t(e){return Promise.resolve().then((()=>{var t=new Error("Cannot find module '"+e+"'");throw t.code="MODULE_NOT_FOUND",t}))}`;
 const workerSrc = await readFile(join(nm, "@ffmpeg/ffmpeg/dist/umd/814.ffmpeg.js"), "utf8");
 if (!workerSrc.includes(STUB)) {
-  throw new Error("ffmpeg worker stub not found — @ffmpeg/ffmpeg changed shape, re-check the patch");
+  throw new Error(
+    "ffmpeg worker stub not found — @ffmpeg/ffmpeg changed shape, re-check the patch",
+  );
 }
 const workerOut = join(process.cwd(), "public/ffmpeg/worker.js");
 await writeFile(workerOut, workerSrc.replace(STUB, "function t(e){return import(e)}"));

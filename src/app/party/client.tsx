@@ -140,8 +140,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
     loadImage(file)
       .then((i) => live && setImg(i))
       .catch(
-        () =>
-          live && setError("That file could not be decoded. Try a PNG, JPEG, GIF or WebP."),
+        () => live && setError("That file could not be decoded. Try a PNG, JPEG, GIF or WebP."),
       );
     return () => {
       live = false;

@@ -24,7 +24,7 @@ export default defineConfig({
     { name: "mobile", use: { ...devices["Pixel 7"] } },
   ],
   webServer: {
-    command: "npx serve out -p 3000 -L",
+    command: "pnpm exec serve out -p 3000 -L",
     url: "http://127.0.0.1:3000",
     reuseExistingServer: true,
     timeout: 60_000,

@@ -35,8 +35,8 @@ export default function Home() {
           Every GIF tool, running in your browser.
         </h1>
         <p className="text-sm text-muted-foreground">
-          {SITE.description} Results are kept in a local history so you can grab them again,
-          and every download is named so it can be dropped straight into Slack.
+          {SITE.description} Results are kept in a local history so you can grab them again, and
+          every download is named so it can be dropped straight into Slack.
         </p>
       </section>
 
