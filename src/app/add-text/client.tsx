@@ -116,69 +116,80 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   const set = <K extends keyof Style>(k: K, v: Style[K]) =>
     setStyle((prev) => ({ ...prev, [k]: v }));
   const previewRef = React.useRef<HTMLCanvasElement>(null);
+  const [reading, setReading] = React.useState(false);
 
   // Decode every frame once per file so typing only re-composites.
   React.useEffect(() => {
-    if (!file) {
-      setFrames([]);
-      setTruncated(false);
-      return;
-    }
+    // Clear first, always: a pick that fails to decode used to leave the old
+    // file's frames in place, and "Add text" would then re-encode those.
+    setFrames([]);
+    setTruncated(false);
+    if (!file) return;
     // Picking file B while A is still decoding must not let A's frames land.
     let stale = false;
-    void run("Reading frames", async () => {
+    // Deliberately not the shared `run`: that one drops re-entrant calls to stop
+    // double-clicks, which would swallow the decode of a second file.
+    void (async () => {
+      setError(null);
+      setReading(true);
       const input = `in-${Date.now()}`;
-      // Probe first: it takes the same queue slot withFFmpeg holds, so calling it
-      // from inside the closure would wait on a job that is waiting on it.
-      const { durationSec } = await probe(file);
-      await withFFmpeg(async (ff) => {
-        try {
-          await ff.writeFile(input, new Uint8Array(await file.arrayBuffer()));
-          const code = await ff.exec(["-i", input, "-vsync", "0", "frame-%04d.png"]);
-          if (code !== 0)
-            throw new Error("ffmpeg could not read that file. Try a GIF, PNG or JPEG.");
-          const names = await frameNames(ff);
-          if (!names.length)
-            throw new Error("No frames came out of that file. Try a GIF, PNG or JPEG.");
-          const out: HTMLImageElement[] = [];
-          for (const name of names.slice(0, MAX_FRAMES)) {
-            const read = await ff.readFile(name);
-            if (typeof read === "string") break;
-            const data = read as Uint8Array;
-            out.push(
-              await loadImage(
-                new Blob([data.slice().buffer as ArrayBuffer], { type: "image/png" }),
-              ),
+      try {
+        // Probe first: it takes the same queue slot withFFmpeg holds, so calling
+        // it from inside the closure would wait on a job that is waiting on it.
+        const { durationSec } = await probe(file);
+        await withFFmpeg(async (ff) => {
+          try {
+            await ff.writeFile(input, new Uint8Array(await file.arrayBuffer()));
+            const code = await ff.exec(["-i", input, "-vsync", "0", "frame-%04d.png"]);
+            if (code !== 0)
+              throw new Error("ffmpeg could not read that file. Try a GIF, PNG or JPEG.");
+            const names = await frameNames(ff);
+            if (!names.length)
+              throw new Error("No frames came out of that file. Try a GIF, PNG or JPEG.");
+            const out: HTMLImageElement[] = [];
+            for (const name of names.slice(0, MAX_FRAMES)) {
+              const read = await ff.readFile(name);
+              if (typeof read === "string") break;
+              const data = read as Uint8Array;
+              out.push(
+                await loadImage(
+                  new Blob([data.slice().buffer as ArrayBuffer], { type: "image/png" }),
+                ),
+              );
+              setProgress(Math.min(0.9, out.length / 60));
+            }
+            if (!out.length)
+              throw new Error("No frames came out of that file. Try a GIF, PNG or JPEG.");
+            if (stale) return;
+            setFrames(out);
+            setTruncated(names.length > MAX_FRAMES);
+            setFrameDelay(
+              durationSec && out.length > 1
+                ? Math.max(20, Math.round((durationSec * 1000) / out.length))
+                : 100,
             );
-            setProgress(Math.min(0.9, out.length / 60));
-          }
-          if (!out.length)
-            throw new Error("No frames came out of that file. Try a GIF, PNG or JPEG.");
-          if (stale) return;
-          setFrames(out);
-          setTruncated(names.length > MAX_FRAMES);
-          setFrameDelay(
-            durationSec && out.length > 1
-              ? Math.max(20, Math.round((durationSec * 1000) / out.length))
-              : 100,
-          );
-          setProgress(1);
-        } finally {
-          // Delete by pattern: a truncated source leaves frames this run never read.
-          for (const name of [input, ...(await frameNames(ff))]) {
-            try {
-              await ff.deleteFile(name);
-            } catch {
-              /* already gone */
+            setProgress(1);
+          } finally {
+            // Delete by pattern: a truncated source leaves frames this run never read.
+            for (const name of [input, ...(await frameNames(ff))]) {
+              try {
+                await ff.deleteFile(name);
+              } catch {
+                /* already gone */
+              }
             }
           }
-        }
-      });
-    });
+        });
+      } catch (err) {
+        if (!stale) setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        if (!stale) setReading(false);
+      }
+    })();
     return () => {
       stale = true;
     };
-  }, [file, run, setProgress]);
+  }, [file, setError, setProgress]);
 
   // Live preview of the first frame.
   React.useEffect(() => {
@@ -301,8 +312,8 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
         </p>
       ) : null}
 
-      <Button onClick={go} disabled={!frames.length}>
-        Add text
+      <Button onClick={go} disabled={!frames.length || reading}>
+        {reading ? "Reading frames…" : "Add text"}
       </Button>
     </>
   );

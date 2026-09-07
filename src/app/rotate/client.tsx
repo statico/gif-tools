@@ -5,7 +5,7 @@ import { Checkbox, ColorField, Input, Label, Select } from "@/components/ui/fiel
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { ffmpegOnce, paletteGifArgs } from "@/lib/engines/ffmpeg";
 import { getTool } from "@/lib/tools";
-import { useFirstFrame } from "@/lib/preview";
+import { NO_PREVIEW, useFirstFrame } from "@/lib/preview";
 
 const tool = getTool("rotate");
 
@@ -34,12 +34,18 @@ function rotated(w: number, h: number, deg: number) {
   const rad = (deg * Math.PI) / 180;
   const c = Math.abs(Math.cos(rad));
   const s = Math.abs(Math.sin(rad));
-  return { rad, ow: Math.max(1, w * c + h * s), oh: Math.max(1, w * s + h * c) };
+  // Rounded: these are pixel counts, and cos(90°) leaves float dust that would
+  // otherwise be printed to the user as "270.00000000000006".
+  return {
+    rad,
+    ow: Math.max(1, Math.round(w * c + h * s)),
+    oh: Math.max(1, Math.round(w * s + h * c)),
+  };
 }
 
 function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) {
   const run = useRun({ setBusy, setError, setProgress });
-  const { frame, size } = useFirstFrame(file);
+  const { frame, size, failed } = useFirstFrame(file);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const [turn, setTurn] = React.useState<keyof typeof TURNS | "custom">("90");
   const [angle, setAngle] = React.useState(15);
@@ -181,7 +187,9 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
               className="block max-h-64 max-w-full"
             />
           ) : (
-            <p className="text-ui text-muted-foreground py-8">Choose a file to preview.</p>
+            <p className="text-ui text-muted-foreground py-8">
+              {failed ? NO_PREVIEW : "Choose a file to preview."}
+            </p>
           )}
         </div>
         {size ? (
