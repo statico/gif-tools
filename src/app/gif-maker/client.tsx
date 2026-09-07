@@ -6,6 +6,7 @@ import { ColorField, Input, Label, Select } from "@/components/ui/field";
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { encodeGif, loadImage, renderFrames } from "@/lib/engines/gif-encode";
 import { getTool } from "@/lib/tools";
+import { clamp } from "@/lib/utils";
 
 const tool = getTool("gif-maker");
 
@@ -31,7 +32,7 @@ function placement(img: HTMLImageElement, w: number, h: number, fit: Fit) {
 
 /** Output size: the first frame's aspect ratio at the chosen width. */
 function outputSize(frames: Frame[], width: number) {
-  const w = Math.max(16, Math.min(2000, Math.round(width)));
+  const w = clamp(Math.round(width), 16, 2000);
   const first = frames[0]?.img;
   const ratio = first ? (first.naturalHeight || 1) / (first.naturalWidth || 1) : 1;
   return { w, h: Math.max(1, Math.round(w * ratio)) };
@@ -121,7 +122,7 @@ function Body({ setBusy, setProgress, setError, publish }: ToolBodyProps) {
         i += 1;
         paint();
       },
-      Math.max(20, Math.round(delay)),
+      clamp(Math.round(delay), 20, 5000),
     );
     return () => clearInterval(id);
   }, [frames, outW, outH, fit, bg, delay]);
@@ -141,7 +142,7 @@ function Body({ setBusy, setProgress, setError, publish }: ToolBodyProps) {
     run("Building GIF", async () => {
       if (!frames.length) throw new Error("Add at least one image first.");
       const { w, h } = outputSize(frames, width);
-      const ms = Math.max(20, Math.round(delay));
+      const ms = clamp(Math.round(delay), 20, 5000);
 
       setProgress(0.3);
       const imageData = renderFrames({ width: w, height: h }, frames.length, (ctx, _t, i) =>
@@ -150,7 +151,7 @@ function Body({ setBusy, setProgress, setError, publish }: ToolBodyProps) {
       setProgress(0.7);
       const data = encodeGif(imageData, {
         delayMs: ms,
-        loop: Math.max(0, Math.round(loop)),
+        loop: clamp(Math.round(loop), 0, 65535),
         transparent: false,
       });
       setProgress(1);

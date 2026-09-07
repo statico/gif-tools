@@ -5,6 +5,7 @@ import { Input, Label } from "@/components/ui/field";
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { ffmpegOnce, paletteGifArgs, probe } from "@/lib/engines/ffmpeg";
 import { getTool } from "@/lib/tools";
+import { clamp } from "@/lib/utils";
 
 const tool = getTool("cut");
 
@@ -15,7 +16,6 @@ function outExt(name: string): string {
   return "gif";
 }
 
-const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 const round2 = (v: number) => Math.round(v * 100) / 100;
 
 function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) {
@@ -30,7 +30,9 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
     setDuration(null);
     if (!file) return;
     let stale = false;
-    setBusy(true, "Reading duration");
+    // The probe shares the ffmpeg queue with a real encode, so it must not
+    // drive the shell's busy state: its finally would clear the badge of a
+    // conversion the user started while it was still pending.
     probe(file)
       .then((info) => {
         if (stale) return;
@@ -46,14 +48,11 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       })
       .catch((e: unknown) => {
         if (!stale) setError(e instanceof Error ? e.message : "Could not read that file.");
-      })
-      .finally(() => {
-        if (!stale) setBusy(false);
       });
     return () => {
       stale = true;
     };
-  }, [file, setBusy, setError]);
+  }, [file, setError]);
 
   const max = duration ?? 0;
   // Never let the two controls meet: the selection is always at least minLen,

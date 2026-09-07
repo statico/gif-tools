@@ -131,14 +131,18 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   };
 
   React.useEffect(() => {
-    if (!file) {
-      setImg(null);
-      return;
-    }
+    // Clear first, always: a new pick that fails to decode used to leave the
+    // previous image on the canvas, and `go()` would then encode that one under
+    // the new file's name.
+    setImg(null);
+    if (!file) return;
     let live = true;
     loadImage(file)
       .then((i) => live && setImg(i))
-      .catch(() => setError("That file could not be decoded. Try a PNG, JPEG, GIF or WebP."));
+      .catch(
+        () =>
+          live && setError("That file could not be decoded. Try a PNG, JPEG, GIF or WebP."),
+      );
     return () => {
       live = false;
     };

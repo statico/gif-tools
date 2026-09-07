@@ -35,21 +35,20 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       return;
     }
     let stale = false;
-    setBusy(true, "Reading duration");
+    // The probe shares the ffmpeg queue with a real encode, so it must not
+    // drive the shell's busy state: its finally would clear the badge of a
+    // conversion the user started while it was still pending.
     probe(file)
       .then((info) => {
         if (!stale) setDuration(info.durationSec);
       })
       .catch(() => {
         if (!stale) setDuration(null);
-      })
-      .finally(() => {
-        if (!stale) setBusy(false);
       });
     return () => {
       stale = true;
     };
-  }, [file, setBusy]);
+  }, [file]);
 
   const go = () =>
     run(mode === "boomerang" ? "Building boomerang" : "Reversing", async () => {

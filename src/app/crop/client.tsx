@@ -6,7 +6,8 @@ import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { ffmpegOnce, paletteGifArgs } from "@/lib/engines/ffmpeg";
 import { getTool } from "@/lib/tools";
 import { outExt } from "@/lib/format";
-import { useFirstFrame } from "@/lib/preview";
+import { NO_PREVIEW, useFirstFrame } from "@/lib/preview";
+import { clamp } from "@/lib/utils";
 
 const tool = getTool("crop");
 
@@ -20,7 +21,6 @@ const RATIOS: Record<string, number | null> = {
   "16:9": 16 / 9,
 };
 
-const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 
 function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) {
   const run = useRun({ setBusy, setError, setProgress });
@@ -30,7 +30,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const dragStart = React.useRef<{ x: number; y: number } | null>(null);
   const ratio = RATIOS[ratioKey] ?? null;
-  const { frame, size: src } = useFirstFrame(file);
+  const { frame, size: src, failed } = useFirstFrame(file);
 
   const url = React.useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
   React.useEffect(
@@ -293,7 +293,9 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       <p className="text-ui text-muted-foreground" role="status" aria-live="polite">
         {src
           ? `Source ${src.w}×${src.h} → crop ${sel.w}×${sel.h} at ${sel.x},${sel.y}`
-          : "Choose a file to read its dimensions."}
+          : failed
+            ? NO_PREVIEW
+            : "Choose a file to read its dimensions."}
       </p>
 
       <Button onClick={go} disabled={!file || !src}>

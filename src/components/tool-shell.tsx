@@ -124,14 +124,12 @@ export function ToolShell({
         if (old) URL.revokeObjectURL(old);
         return URL.createObjectURL(f);
       });
-      // Seed the download name from the source so it stays recognisable.
+      // Seed the download name from the source so it stays recognisable — but
+      // never over a name the user typed on purpose.
       const stem = f.name.replace(/\.[^.]+$/, "");
-      if (stem) {
-        setName(slugify(stem, tool.slug));
-        setNameEdited(true);
-      }
+      if (stem && !nameEdited) setName(slugify(stem, tool.slug));
     },
-    [tool.slug],
+    [tool.slug, nameEdited],
   );
 
   const resultMime = result ? result.mime ?? mimeFor(`x.${result.ext}`) : null;
@@ -373,8 +371,14 @@ function stats(size: { w: number; h: number } | null, ext: string, bytes: number
 
 export function useRun(props: Pick<ToolBodyProps, "setBusy" | "setError" | "setProgress">) {
   const { setBusy, setError, setProgress } = props;
+  // No tool disables its own button, so a double-click used to start two runs:
+  // the first one's cleanup cleared the busy state while the second was still
+  // going, and both published, leaving two history entries for one action.
+  const running = React.useRef(false);
   return React.useCallback(
     async (message: string, fn: () => Promise<void>) => {
+      if (running.current) return;
+      running.current = true;
       setError(null);
       setBusy(true, message);
       setProgress(0);
@@ -383,6 +387,7 @@ export function useRun(props: Pick<ToolBodyProps, "setBusy" | "setError" | "setP
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
       } finally {
+        running.current = false;
         setBusy(false);
       }
     },
