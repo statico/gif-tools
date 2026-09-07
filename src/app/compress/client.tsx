@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox, Label, Range, Readout, Select } from "@/components/ui/field";
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { compressImage, MagickFormat } from "@/lib/engines/magick";
+import { useFirstFrame } from "@/lib/preview";
 import { getTool } from "@/lib/tools";
 import { formatBytes } from "@/lib/utils";
 
@@ -22,22 +23,11 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   const [quality, setQuality] = React.useState(82);
   const [strip, setStrip] = React.useState(true);
   const [saving, setSaving] = React.useState<{ text: string; pct: number } | null>(null);
-  const [dims, setDims] = React.useState<{ w: number; h: number } | null>(null);
+  // Shared with the preview tools: one browser decode, and it reports failure
+  // instead of leaving the readout on "reading…" forever.
+  const { size: dims, failed } = useFirstFrame(file);
 
-  // Still images only here, so decoding the source in an <img> beats loading ffmpeg.
-  React.useEffect(() => {
-    setSaving(null);
-    if (!file) {
-      setDims(null);
-      return;
-    }
-    setDims(null);
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => setDims({ w: img.naturalWidth, h: img.naturalHeight });
-    img.src = url;
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+  React.useEffect(() => setSaving(null), [file]);
 
   // ImageMagick re-encodes in place; nothing here resizes.
   const lossless = key === "png";
@@ -102,7 +92,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       <Readout
         rows={
           [
-            ["size", dims ? `${dims.w} × ${dims.h} px` : file ? "reading…" : "—"],
+            ["size", dims ? `${dims.w} × ${dims.h} px` : !file ? "—" : failed ? "unknown" : "reading…"],
             ["format", `.${FORMATS[key].ext}`],
             ["quality", lossless ? "lossless — quality not used" : `${quality} — ${qualityWords}`],
             ["metadata", strip ? "stripped" : "kept"],

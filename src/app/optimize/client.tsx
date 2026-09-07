@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox, Label, Range, Readout, Select } from "@/components/ui/field";
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { optimizeGif } from "@/lib/engines/gifsicle";
+import { useFirstFrame } from "@/lib/preview";
 import { getTool } from "@/lib/tools";
 import { formatBytes } from "@/lib/utils";
 
@@ -16,22 +17,11 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   const [useLossy, setUseLossy] = React.useState(true);
   const [colors, setColors] = React.useState(256);
   const [saving, setSaving] = React.useState<{ text: string; pct: number } | null>(null);
-  const [dims, setDims] = React.useState<{ w: number; h: number } | null>(null);
+  // Shared with the preview tools: one browser decode, and it reports failure
+  // instead of leaving the readout on "reading…" forever.
+  const { size: dims, failed } = useFirstFrame(file);
 
-  // A GIF decodes in an <img>, so the dimensions cost nothing but a decode.
-  React.useEffect(() => {
-    setSaving(null);
-    if (!file) {
-      setDims(null);
-      return;
-    }
-    setDims(null);
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => setDims({ w: img.naturalWidth, h: img.naturalHeight });
-    img.src = url;
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+  React.useEffect(() => setSaving(null), [file]);
 
   // gifsicle only gets --colors when it is below 256, and no --scale at all.
   const lossyWords =
@@ -43,7 +33,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
           ? "visible noise"
           : "heavy artifacts";
   const readout: [string, string][] = [
-    ["size", dims ? `${dims.w} × ${dims.h} px` : file ? "reading…" : "—"],
+    ["size", dims ? `${dims.w} × ${dims.h} px` : !file ? "—" : failed ? "unknown" : "reading…"],
     ["format", ".gif"],
     ["colors", colors < 256 ? `reduced to ${colors}` : "palette unchanged"],
     ["lossy", useLossy ? `${lossy} — ${lossyWords}` : "off"],

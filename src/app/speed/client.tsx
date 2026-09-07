@@ -13,8 +13,8 @@ const secs = (v: number) => `${v.toFixed(2)}s`;
 // GIF frame delays are whole hundredths of a second and browsers clamp anything
 // under 2cs to 10cs, so a GIF that asks for more than 50fps plays back *slower*.
 const GIF_MAX_FPS = 50;
-// ponytail: probe() does not report a frame rate, so the readout's 15fps
-// reference source stands in. Widen this once probe returns the real rate.
+// Fallback for a source whose rate ffmpeg does not print (some single-frame
+// GIFs); typical hand-made GIF territory.
 const REF_FPS = 15;
 const round1 = (v: number) => Math.round(v * 10) / 10;
 
@@ -34,10 +34,12 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   const [drop, setDrop] = React.useState(false);
   const [dropFps, setDropFps] = React.useState(12);
   const [duration, setDuration] = React.useState<number | null>(null);
+  const [srcFps, setSrcFps] = React.useState<number | null>(null);
 
   React.useEffect(() => {
     if (!file) {
       setDuration(null);
+      setSrcFps(null);
       return;
     }
     let stale = false;
@@ -46,7 +48,9 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
     // conversion the user started while it was still pending.
     probe(file)
       .then((info) => {
-        if (!stale) setDuration(info.durationSec);
+        if (stale) return;
+        setDuration(info.durationSec);
+        setSrcFps(info.fps);
       })
       .catch(() => {
         if (!stale) setDuration(null);
@@ -62,7 +66,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
     outputExt(file) === "gif" &&
     mode === "multiplier" &&
     !drop &&
-    multiplier * REF_FPS > GIF_MAX_FPS;
+    multiplier * (srcFps ?? REF_FPS) > GIF_MAX_FPS;
 
   const go = () =>
     run("Changing speed", async () => {

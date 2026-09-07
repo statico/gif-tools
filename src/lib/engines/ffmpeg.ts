@@ -194,7 +194,12 @@ export function paletteGifArgs({
 /** Probe a media file for duration/size by parsing ffmpeg's stderr log. */
 export async function probe(
   file: Blob | File,
-): Promise<{ durationSec: number | null; width: number | null; height: number | null }> {
+): Promise<{
+  durationSec: number | null;
+  width: number | null;
+  height: number | null;
+  fps: number | null;
+}> {
   const ff = await getFFmpeg();
   const name = `probe-${Date.now()}`;
   const lines: string[] = [];
@@ -217,9 +222,13 @@ export async function probe(
   });
   const dur = text.match(/Duration:\s*(\d+):(\d+):(\d+\.\d+)/);
   const dim = text.match(/,\s*(\d{2,5})x(\d{2,5})[\s,]/);
+  // ffmpeg prints both "25 fps" and "25 tbr"; the first is the container's own
+  // rate, which is what a speed multiplier is applied to.
+  const rate = text.match(/,\s*([\d.]+)\s*fps[\s,]/);
   return {
     durationSec: dur ? +dur[1] * 3600 + +dur[2] * 60 + +dur[3] : null,
     width: dim ? +dim[1] : null,
     height: dim ? +dim[2] : null,
+    fps: rate && Number.isFinite(+rate[1]) && +rate[1] > 0 ? +rate[1] : null,
   };
 }
