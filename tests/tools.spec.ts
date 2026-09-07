@@ -50,7 +50,10 @@ test("a result is written to history and survives a reload", async ({ page }) =>
 test("the ffmpeg worker loads its core and produces output", async ({ page }) => {
   await page.goto("/reverse/");
   await page.setInputFiles("input[type=file]", GIF);
-  await page.getByRole("button", { name: /reverse/i }).last().click();
+  await page
+    .getByRole("button", { name: /reverse/i })
+    .last()
+    .click();
 
   await expect(page.getByRole("button", { name: /^download/i })).toBeEnabled({
     timeout: 150_000,
@@ -62,7 +65,10 @@ test("the ffmpeg worker loads its core and produces output", async ({ page }) =>
 // copying dist/x64/magick.wasm gives a LinkError at instantiation time.
 test("imagemagick links against the wasm32 build", async ({ page }) => {
   await page.goto("/compress/");
-  await page.setInputFiles("input[type=file]", path.join(import.meta.dirname, "fixtures/sample.png"));
+  await page.setInputFiles(
+    "input[type=file]",
+    path.join(import.meta.dirname, "fixtures/sample.png"),
+  );
   await page.getByRole("button", { name: "Compress image", exact: true }).click();
 
   await expect(page.getByRole("button", { name: /^download/i })).toBeEnabled({
@@ -122,7 +128,10 @@ for (const [fixture, wantTransparent] of [
     page,
   }) => {
     await page.goto("/party/");
-    await page.setInputFiles("input[type=file]", path.join(import.meta.dirname, "fixtures", fixture));
+    await page.setInputFiles(
+      "input[type=file]",
+      path.join(import.meta.dirname, "fixtures", fixture),
+    );
     await page.getByRole("button", { name: /party it up/i }).click();
 
     const download = page.getByRole("button", { name: /^download/i });

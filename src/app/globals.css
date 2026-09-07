@@ -137,9 +137,15 @@
 }
 
 @layer base {
-  * { border-color: hsl(var(--border)); }
-  html { color-scheme: light; }
-  html.dark { color-scheme: dark; }
+  * {
+    border-color: hsl(var(--border));
+  }
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
   body {
     background: hsl(var(--background));
     color: hsl(var(--foreground));
@@ -153,8 +159,12 @@
 }
 
 @layer components {
-  .card-glow { transition: border-color 0.15s; }
-  .card-glow:hover { border-color: hsl(var(--smui-border-hover)); }
+  .card-glow {
+    transition: border-color 0.15s;
+  }
+  .card-glow:hover {
+    border-color: hsl(var(--smui-border-hover));
+  }
   .smui-label {
     font-size: var(--text-label);
     letter-spacing: 1.5px;
@@ -169,11 +179,16 @@
   }
 }
 
-::selection { background: hsl(193 44% 67% / 0.2); color: hsl(193 44% 67%); }
+::selection {
+  background: hsl(193 44% 67% / 0.2);
+  color: hsl(193 44% 67%);
+}
 
 /* Respect users who ask for less motion; our previews animate a lot. */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

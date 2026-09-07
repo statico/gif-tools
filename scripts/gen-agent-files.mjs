@@ -167,7 +167,10 @@ ${ORDER.map(
   (cat) => `## ${CATEGORIES[cat].label}
 
 ${TOOLS.filter((t) => t.category === cat)
-  .map((t) => `- [${t.name}](${SITE.url}/${t.slug}/) ([markdown](${SITE.url}/${t.slug}.md)): ${t.blurb}`)
+  .map(
+    (t) =>
+      `- [${t.name}](${SITE.url}/${t.slug}/) ([markdown](${SITE.url}/${t.slug}.md)): ${t.blurb}`,
+  )
   .join("\n")}`,
 ).join("\n\n")}
 `,
@@ -192,7 +195,9 @@ these things.
 ${TERMS.map(
   (t) =>
     `## ${t.term}\n\n${t.body}${
-      t.see ? `\n\nSee [${TOOLS.find((x) => x.slug === t.see)?.name}](${SITE.url}/${t.see}.md).` : ""
+      t.see
+        ? `\n\nSee [${TOOLS.find((x) => x.slug === t.see)?.name}](${SITE.url}/${t.see}.md).`
+        : ""
     }`,
 ).join("\n\n")}
 

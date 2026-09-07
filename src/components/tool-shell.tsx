@@ -75,8 +75,18 @@ export function ToolShell({
 
   // Object URLs are revoked whenever they're replaced, so long sessions with
   // many runs don't pin every previous result in memory.
-  React.useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
-  React.useEffect(() => () => { if (sourceUrl) URL.revokeObjectURL(sourceUrl); }, [sourceUrl]);
+  React.useEffect(
+    () => () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    },
+    [previewUrl],
+  );
+  React.useEffect(
+    () => () => {
+      if (sourceUrl) URL.revokeObjectURL(sourceUrl);
+    },
+    [sourceUrl],
+  );
 
   React.useEffect(() => {
     if (nameEdited) return;
@@ -132,7 +142,7 @@ export function ToolShell({
     [tool.slug, nameEdited],
   );
 
-  const resultMime = result ? result.mime ?? mimeFor(`x.${result.ext}`) : null;
+  const resultMime = result ? (result.mime ?? mimeFor(`x.${result.ext}`)) : null;
   const sourceSize = useMediaSize(sourceUrl, file?.type ?? null);
   const resultSize = useMediaSize(previewUrl, resultMime);
 
@@ -146,7 +156,10 @@ export function ToolShell({
             </CardHeader>
             <CardContent>
               <div
-                onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragging(true);
+                }}
                 onDragLeave={() => setDragging(false)}
                 onDrop={(e) => {
                   e.preventDefault();
@@ -231,7 +244,10 @@ export function ToolShell({
           >
             {busy ? (
               <div className="text-center">
-                <Loader2 className="mx-auto mb-2 size-5 animate-spin text-primary" aria-hidden="true" />
+                <Loader2
+                  className="mx-auto mb-2 size-5 animate-spin text-primary"
+                  aria-hidden="true"
+                />
                 <p className="text-ui text-foreground">{busyMessage ?? "Processing"}</p>
                 <p className="text-label text-muted-foreground tabular-nums">
                   {Math.round(progress * 100)}%
@@ -267,7 +283,10 @@ export function ToolShell({
               role="alert"
               className="flex gap-2 border border-destructive/40 bg-destructive/5 p-2.5 text-ui text-foreground"
             >
-              <AlertTriangle className="size-4 shrink-0 text-destructive mt-0.5" aria-hidden="true" />
+              <AlertTriangle
+                className="size-4 shrink-0 text-destructive mt-0.5"
+                aria-hidden="true"
+              />
               <span>{error}</span>
             </div>
           ) : null}
@@ -290,8 +309,11 @@ export function ToolShell({
               </span>
             </div>
             <p id={`${tool.slug}-name-hint`} className="text-label text-muted-foreground mt-1">
-              Saved as <code className="text-foreground">{slugify(name, tool.slug)}.{result?.ext ?? suggestedExt ?? "gif"}</code> — a
-              valid Slack emoji name.
+              Saved as{" "}
+              <code className="text-foreground">
+                {slugify(name, tool.slug)}.{result?.ext ?? suggestedExt ?? "gif"}
+              </code>{" "}
+              — a valid Slack emoji name.
             </p>
           </div>
 

@@ -6,8 +6,7 @@ export async function onRequest(context) {
   try {
     const accept = context.request.headers.get("accept") || "";
     const url = new URL(context.request.url);
-    const wantsMarkdown =
-      /text\/markdown/.test(accept) && !/text\/html/.test(accept);
+    const wantsMarkdown = /text\/markdown/.test(accept) && !/text\/html/.test(accept);
 
     if (wantsMarkdown && !url.pathname.endsWith(".md")) {
       // /text-emoji/ -> /text-emoji.md, / -> /index.md

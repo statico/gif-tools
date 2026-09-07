@@ -15,32 +15,26 @@ export const metadata: Metadata = {
   },
 };
 
-
 export default function Page() {
   return (
     <>
       <JsonLd
-        data={pageJsonLd(
-          "glossary",
-          "GIF glossary",
-          metadata.description as string,
-          {
-            mainEntity: {
-              "@type": "DefinedTermSet",
-              name: "GIF glossary",
-              hasDefinedTerm: TERMS.map((t) => ({
-                "@type": "DefinedTerm",
-                name: t.term,
-                description: t.body,
-              })),
-            },
+        data={pageJsonLd("glossary", "GIF glossary", metadata.description as string, {
+          mainEntity: {
+            "@type": "DefinedTermSet",
+            name: "GIF glossary",
+            hasDefinedTerm: TERMS.map((t) => ({
+              "@type": "DefinedTerm",
+              name: t.term,
+              description: t.body,
+            })),
           },
-        )}
+        })}
       />
       <h1 className="text-heading text-foreground tracking-tight mb-1.5">GIF glossary</h1>
       <p className="text-sm text-muted-foreground max-w-3xl mb-6">
-        The terms these tools use, defined once. Every setting on every page means one of
-        these things.
+        The terms these tools use, defined once. Every setting on every page means one of these
+        things.
       </p>
       <dl className="max-w-3xl space-y-5">
         {TERMS.map((t) => (
@@ -53,10 +47,7 @@ export default function Page() {
               {t.see ? (
                 <>
                   {" "}
-                  <Link
-                    href={`/${t.see}/`}
-                    className="text-primary underline underline-offset-2"
-                  >
+                  <Link href={`/${t.see}/`} className="text-primary underline underline-offset-2">
                     {TOOLS.find((x) => x.slug === t.see)?.name}
                   </Link>
                 </>

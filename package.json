@@ -2,12 +2,17 @@
   "name": "gif-tools",
   "version": "0.1.0",
   "private": true,
+  "description": "statico's GIF tools — a GIF toolkit that runs entirely in the browser.",
+  "license": "MIT",
+  "packageManager": "pnpm@11.24.0",
   "type": "module",
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build && node scripts/gen-agent-files.mjs",
-    "start": "npx serve out -p 3000",
+    "start": "serve out -p 3000",
+    "deploy": "pnpm build && pnpm dlx wrangler pages deploy out --project-name=gif-tools",
     "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
     "test": "playwright test",
     "predev": "node scripts/copy-wasm.mjs",
     "prebuild": "node scripts/copy-wasm.mjs"
@@ -36,6 +41,7 @@
     "@types/react": "^19.0.7",
     "@types/react-dom": "^19.0.3",
     "postcss": "^8.5.1",
+    "prettier": "^3.9.6",
     "serve": "^14.2.4",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.3"

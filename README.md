@@ -1,10 +1,16 @@
-# gif.statico.io
+# statico's GIF tools
 
-A GIF toolkit that runs entirely in your browser. It covers most of what
-a hosted GIF editor does, plus a set of Slack emoji generators, with no backend: ffmpeg,
-gifsicle and ImageMagick are compiled to WebAssembly and run in the page.
+> [!NOTE]
+> Every line of this project — the site, the tests and the documentation — was
+> written by [Claude Code](https://claude.com/claude-code).
+
+A GIF toolkit that runs entirely in your browser: convert, resize, crop, cut,
+optimize and caption GIFs, and build Slack emoji. ffmpeg, gifsicle and
+ImageMagick are compiled to WebAssembly and run in the page.
 
 Nothing is uploaded. There is no API, no account and no server-side processing.
+
+Live at [gif.statico.io](https://gif.statico.io).
 
 ## Tools
 
@@ -22,32 +28,39 @@ captions, effects and colour adjustment.
 ## Development
 
 ```bash
-npm install
-npm run dev          # http://localhost:3000
-npm run build        # static export to out/
-npm test             # Playwright, against the built export
+pnpm install
+pnpm dev            # http://localhost:3000
+pnpm build          # static export to out/
+pnpm test           # Playwright, against the built export
+pnpm typecheck
 ```
 
-`predev`/`prebuild` copy the WebAssembly binaries from `node_modules` into
-`public/`, so they are served same-origin. Those directories are generated and
-git-ignored.
+`predev`/`prebuild` copy the WebAssembly binaries out of `node_modules` into
+`public/`, so they are served same-origin. Nothing is vendored: ffmpeg,
+gifsicle and ImageMagick all arrive as npm packages, and `public/ffmpeg/` and
+`public/magick/` are generated and git-ignored.
 
-If npm fails with `EPERM` on `~/.npm`, the cache is not writable in your
-sandbox — `.npmrc` redirects it, so run commands from the repo root.
+`pnpm-workspace.yaml` sets `minimumReleaseAge`, so `pnpm install` refuses any
+release younger than a week.
 
 ## Deployment
 
 Cloudflare Pages:
 
-| Setting | Value |
-|---|---|
-| Build command | `npm run build` |
-| Output directory | `out` |
-| Node version | 24 (set by `.node-version`) |
+| Setting          | Value                       |
+| ---------------- | --------------------------- |
+| Build command    | `pnpm build`                |
+| Output directory | `out`                       |
+| Node version     | 24 (set by `.node-version`) |
 
 Node 24 is not optional: the postbuild script imports `src/lib/tools.ts`
-directly, which needs native TypeScript support. `.node-version` pins it for
-Pages.
+directly, which needs native TypeScript support.
+
+To deploy from a checkout instead of from Git:
+
+```bash
+pnpm run deploy     # `run` is required: pnpm has its own `deploy` command
+```
 
 `public/_headers` sets caching for the WebAssembly binaries and the correct
 content types for the Markdown mirrors, and is copied into the export. The
@@ -65,3 +78,7 @@ it. The single-threaded build is used deliberately so the site needs no
 `SharedArrayBuffer`; the trade-off is encode speed.
 
 See [AGENTS.md](./AGENTS.md) for architecture and conventions.
+
+## License
+
+MIT — see [LICENSE](./LICENSE).

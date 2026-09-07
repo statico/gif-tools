@@ -3,7 +3,9 @@ import { writeFile, mkdir } from "node:fs/promises";
 import gifenc from "gifenc";
 const { GIFEncoder, quantize, applyPalette } = gifenc;
 
-const W = 64, H = 64, FRAMES = 6;
+const W = 64,
+  H = 64,
+  FRAMES = 6;
 const gif = GIFEncoder();
 
 for (let f = 0; f < FRAMES; f++) {
@@ -62,7 +64,11 @@ const chunk = (type, body) => {
 const ihdr = Buffer.alloc(13);
 ihdr.writeUInt32BE(W, 0);
 ihdr.writeUInt32BE(H, 4);
-ihdr[8] = 8; ihdr[9] = 2; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
+ihdr[8] = 8;
+ihdr[9] = 2;
+ihdr[10] = 0;
+ihdr[11] = 0;
+ihdr[12] = 0;
 const png = Buffer.concat([
   Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
   chunk("IHDR", ihdr),

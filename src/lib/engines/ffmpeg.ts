@@ -192,9 +192,7 @@ export function paletteGifArgs({
 }
 
 /** Probe a media file for duration/size by parsing ffmpeg's stderr log. */
-export async function probe(
-  file: Blob | File,
-): Promise<{
+export async function probe(file: Blob | File): Promise<{
   durationSec: number | null;
   width: number | null;
   height: number | null;
