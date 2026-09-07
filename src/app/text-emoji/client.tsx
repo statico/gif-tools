@@ -193,10 +193,13 @@ function draw(ctx: CanvasRenderingContext2D, S: number, o: Opts, t: number) {
       ctx.shadowBlur = l.fs * 0.12;
       ctx.shadowOffsetY = l.fs * 0.06;
     }
-    if (o.stroke && o.strokeW > 0) {
+    // Thickness alone decides whether there is an outline. Presets leave stroke
+    // empty, and the colour field already shows black as the standing default,
+    // so keying off the colour made the thickness slider a no-op after a preset.
+    if (o.strokeW > 0) {
       ctx.lineJoin = "round";
       ctx.lineWidth = (l.fs * o.strokeW) / 100;
-      ctx.strokeStyle = o.stroke;
+      ctx.strokeStyle = o.stroke || "#000000";
       ctx.strokeText(l.line, 0, 0);
     }
     ctx.shadowColor = "transparent";
