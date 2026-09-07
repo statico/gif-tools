@@ -2,11 +2,12 @@
   "name": "gif-tools",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build && node scripts/gen-agent-files.mjs",
     "start": "npx serve out -p 3000",
-    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
     "test": "playwright test",
     "predev": "node scripts/copy-wasm.mjs",
     "prebuild": "node scripts/copy-wasm.mjs"
