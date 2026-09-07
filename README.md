@@ -43,10 +43,19 @@ Cloudflare Pages:
 |---|---|
 | Build command | `npm run build` |
 | Output directory | `out` |
-| Node version | 20 or newer |
+| Node version | 24 (set by `.node-version`) |
+
+Node 24 is not optional: the postbuild script imports `src/lib/tools.ts`
+directly, which needs native TypeScript support. `.node-version` pins it for
+Pages.
 
 `public/_headers` sets caching for the WebAssembly binaries and the correct
-content types for the Markdown mirrors, and is copied into the export.
+content types for the Markdown mirrors, and is copied into the export. The
+postbuild appends a canonical `Link` header for each Markdown mirror.
+
+`functions/_middleware.js` deploys alongside the static export and serves the
+`.md` mirror to clients that send `Accept: text/markdown`. It falls through to
+the static asset on any error.
 
 ## Notes
 

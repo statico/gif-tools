@@ -10,12 +10,6 @@ export const CardHeader = ({ className, ...p }: React.HTMLAttributes<HTMLDivElem
 export const CardTitle = ({ className, ...p }: React.HTMLAttributes<HTMLHeadingElement>) => (
   <h2 className={cn("text-xs text-muted-foreground tracking-[1.5px] uppercase font-normal", className)} {...p} />
 );
-export const CardDescription = ({ className, ...p }: React.HTMLAttributes<HTMLParagraphElement>) => (
-  <p className={cn("text-xs text-muted-foreground flex items-center gap-1", className)} {...p} />
-);
 export const CardContent = ({ className, ...p }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={cn("p-3.5", className)} {...p} />
-);
-export const CardFooter = ({ className, ...p }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex items-center gap-2 p-3.5 border-t border-border", className)} {...p} />
 );

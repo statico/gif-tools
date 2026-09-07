@@ -14,10 +14,6 @@ let loading: Promise<FFmpeg> | null = null;
 
 export type ProgressFn = (ratio: number, message?: string) => void;
 
-export function isFFmpegLoaded() {
-  return instance !== null;
-}
-
 export async function getFFmpeg(onProgress?: ProgressFn): Promise<FFmpeg> {
   if (instance) return instance;
   if (!loading) {
