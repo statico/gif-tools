@@ -5,6 +5,7 @@ import { Checkbox, ColorField, Input, Label, Range, Select } from "@/components/
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { encodeGif, renderFrames } from "@/lib/engines/gif-encode";
 import { getTool } from "@/lib/tools";
+import { inkMetrics } from "@/lib/utils";
 
 const tool = getTool("number");
 
@@ -83,14 +84,14 @@ function draw(ctx: CanvasRenderingContext2D, S: number, o: Opts, t: number) {
   ctx.textBaseline = "alphabetic";
   ctx.font = font(100);
   const ref = ctx.measureText(text);
-  const rw = Math.max(1, ref.width);
+  const rw = inkMetrics(ref).w;
   const rh = Math.max(1, ref.actualBoundingBoxAscent + ref.actualBoundingBoxDescent);
   const fs = Math.max(1, 100 * Math.min(inner / rw, textH / rh));
   ctx.font = font(fs);
   const m = ctx.measureText(text);
   const asc = m.actualBoundingBoxAscent;
   const desc = m.actualBoundingBoxDescent;
-  const tw = Math.max(1, m.width);
+  const { w: tw, dx } = inkMetrics(m);
 
   ctx.save();
   ctx.translate(S / 2, margin + textH / 2);
@@ -124,10 +125,10 @@ function draw(ctx: CanvasRenderingContext2D, S: number, o: Opts, t: number) {
     ctx.lineJoin = "round";
     ctx.lineWidth = fs * 0.1;
     ctx.strokeStyle = o.stroke;
-    ctx.strokeText(text, 0, y);
+    ctx.strokeText(text, -dx, y);
   }
   ctx.fillStyle = paint;
-  ctx.fillText(text, 0, y);
+  ctx.fillText(text, -dx, y);
 
   if (uBlock) {
     const ux = Math.min(tw, inner) / 2;

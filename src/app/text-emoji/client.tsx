@@ -5,6 +5,7 @@ import { Checkbox, ColorField, Input, Label, Range, Select } from "@/components/
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { encodeGif, renderFrames } from "@/lib/engines/gif-encode";
 import { getTool } from "@/lib/tools";
+import { inkMetrics } from "@/lib/utils";
 
 const tool = getTool("text-emoji");
 
@@ -161,15 +162,17 @@ function draw(ctx: CanvasRenderingContext2D, S: number, o: Opts, t: number) {
   const laid = lines.map((line) => {
     ctx.font = font(100);
     const m = ctx.measureText(line || " ");
-    const w = Math.max(1, m.width);
+    const w = inkMetrics(m).w;
     const h = Math.max(1, m.actualBoundingBoxAscent + m.actualBoundingBoxDescent);
     const fs = Math.max(1, 100 * Math.min(inner / w, budget / h));
     ctx.font = font(fs);
     const m2 = ctx.measureText(line || " ");
+    const ink = inkMetrics(m2);
     return {
       line,
       fs,
-      w: Math.max(1, m2.width),
+      w: ink.w,
+      dx: ink.dx,
       asc: m2.actualBoundingBoxAscent,
       desc: m2.actualBoundingBoxDescent,
     };
@@ -223,13 +226,13 @@ function draw(ctx: CanvasRenderingContext2D, S: number, o: Opts, t: number) {
       ctx.lineJoin = "round";
       ctx.lineWidth = (l.fs * o.strokeW) / 100;
       ctx.strokeStyle = o.stroke || "#000000";
-      ctx.strokeText(l.line, 0, 0);
+      ctx.strokeText(l.line, -l.dx, 0);
     }
     ctx.shadowColor = "transparent";
     ctx.shadowBlur = 0;
     ctx.shadowOffsetY = 0;
     ctx.fillStyle = paint;
-    ctx.fillText(l.line, 0, 0);
+    ctx.fillText(l.line, -l.dx, 0);
     ctx.restore();
     y += l.desc + gap;
   }
