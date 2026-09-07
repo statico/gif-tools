@@ -21,6 +21,7 @@ test("text-emoji generates a downloadable file with a slack-safe name", async ({
   await page.goto("/text-emoji/");
 
   // Generators need no upload, so this exercises the canvas path on its own.
+  await page.getByRole("button", { name: /^generate /i }).click();
   const download = page.getByRole("button", { name: /^download/i });
   await expect(download).toBeEnabled({ timeout: 60_000 });
 
@@ -62,7 +63,7 @@ test("the ffmpeg worker loads its core and produces output", async ({ page }) =>
 test("imagemagick links against the wasm32 build", async ({ page }) => {
   await page.goto("/compress/");
   await page.setInputFiles("input[type=file]", path.join(__dirname, "fixtures/sample.png"));
-  await page.getByRole("button", { name: /compress image/i }).click();
+  await page.getByRole("button", { name: "Compress image", exact: true }).click();
 
   await expect(page.getByRole("button", { name: /^download/i })).toBeEnabled({
     timeout: 120_000,
