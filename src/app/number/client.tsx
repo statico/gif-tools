@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Checkbox, Input, Label, Range, Select } from "@/components/ui/field";
+import { Checkbox, ColorField, Input, Label, Range, Select } from "@/components/ui/field";
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { encodeGif, renderFrames } from "@/lib/engines/gif-encode";
 import { getTool } from "@/lib/tools";
@@ -128,46 +128,6 @@ function draw(ctx: CanvasRenderingContext2D, S: number, o: Opts, t: number) {
   }
   ctx.restore();
   ctx.shadowBlur = 0;
-}
-
-function ColorField({
-  id,
-  label,
-  value,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const [text, setText] = React.useState(value);
-  React.useEffect(() => setText(value), [value]);
-  const valid = /^#[0-9a-fA-F]{6}$/.test(text);
-  return (
-    <div>
-      <Label htmlFor={id}>{label}</Label>
-      <div className="flex gap-2">
-        <input
-          id={id}
-          type="color"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="h-9 w-12 shrink-0 border border-input bg-background p-1"
-        />
-        <Input
-          aria-label={`${label} hex value`}
-          value={text}
-          spellCheck={false}
-          aria-invalid={!valid}
-          onChange={(e) => {
-            setText(e.target.value);
-            if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) onChange(e.target.value);
-          }}
-        />
-      </div>
-    </div>
-  );
 }
 
 function Body({
@@ -391,12 +351,7 @@ function Body({
         <Label>live preview</Label>
         <div className="flex items-center gap-4 border border-border p-3">
           <div
-            className="shrink-0 border border-border"
-            style={{
-              backgroundImage:
-                "repeating-conic-gradient(hsl(var(--muted)) 0% 25%, hsl(var(--background)) 0% 50%)",
-              backgroundSize: "16px 16px",
-            }}
+            className="checkerboard shrink-0 border border-border"
           >
             <canvas
               ref={big}
@@ -409,12 +364,8 @@ function Body({
           </div>
           <div className="min-w-0">
             <div
-              className="inline-block border border-border"
-              style={{
-                backgroundImage:
-                  "repeating-conic-gradient(hsl(var(--muted)) 0% 25%, hsl(var(--background)) 0% 50%)",
-                backgroundSize: "8px 8px",
-              }}
+              className="checkerboard inline-block border border-border"
+              style={{ "--checker-size": "8px" } as React.CSSProperties}
             >
               <canvas ref={small} width={size} height={size} className="block size-[22px]" aria-hidden="true" />
             </div>
