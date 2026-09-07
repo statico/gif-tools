@@ -1,0 +1,181 @@
+@import "tailwindcss";
+
+/* ── smui // spacemolt: Nord terminal theme for shadcn/ui ──────────────
+   Authored from https://smui.statico.io/skill.md.
+   The published registry JSON (r/spacemolt-theme.json) ships dark values in
+   BOTH its light and dark blocks, so light mode here comes from skill.md's
+   documented Snow Storm palette instead. ─────────────────────────────── */
+
+:root {
+  --radius: 0rem;
+
+  /* light — Snow Storm */
+  --background: 217.5 26.7% 94.1%;
+  --foreground: 220 16.4% 21.6%;
+  --card: 218.2 26.8% 92%;
+  --card-foreground: 220 16.4% 21.6%;
+  --popover: 218.2 26.8% 92%;
+  --popover-foreground: 220 16.4% 21.6%;
+  --primary: 212.5 32.1% 43.9%;
+  --primary-foreground: 217.5 26.7% 94.1%;
+  --secondary: 218.8 27.9% 88%;
+  --secondary-foreground: 220 16.4% 21.6%;
+  --muted: 218.8 27.9% 88%;
+  --muted-foreground: 216 12.2% 32.2%;
+  --accent: 214.7 35.8% 89.6%;
+  --accent-foreground: 212.5 32.1% 43.9%;
+  --destructive: 353.2 54.5% 41.4%;
+  --destructive-foreground: 217.5 26.7% 94.1%;
+  --border: 218.8 18.7% 82.2%;
+  --input: 218.8 18.7% 82.2%;
+  --ring: 212.5 32.1% 43.9%;
+
+  --smui-frost-1: 178.7 25.1% 44%;
+  --smui-frost-2: 212.5 32.1% 43.9%;
+  --smui-frost-3: 210 34% 43%;
+  --smui-frost-4: 212.5 32.1% 43.9%;
+  --smui-green: 105.8 29.4% 36.7%;
+  --smui-yellow: 43.7 63.3% 33.1%;
+  --smui-orange: 16.8 51.6% 42.2%;
+  --smui-red: 353.2 54.5% 41.4%;
+  --smui-purple: 305.9 19.6% 41%;
+
+  --smui-surface-0: 217.5 26.7% 94.1%;
+  --smui-surface-1: 218.2 26.8% 92%;
+  --smui-surface-2: 218.8 27.9% 88%;
+  --smui-surface-3: 218.8 18.3% 81.8%;
+  --smui-border-hover: 216.9 17.6% 71%;
+}
+
+.dark {
+  /* dark — Polar Night */
+  --background: 216 16.1% 12.2%;
+  --foreground: 213 27% 88%;
+  --card: 216.9 16.5% 15.5%;
+  --card-foreground: 213 27% 88%;
+  --popover: 216.9 16.5% 15.5%;
+  --popover-foreground: 213 27% 88%;
+  --primary: 193.3 43.4% 67.5%;
+  --primary-foreground: 216 16.1% 12.2%;
+  --secondary: 216 15.8% 18.6%;
+  --secondary-foreground: 213 27% 88%;
+  --muted: 216 15.8% 18.6%;
+  --muted-foreground: 213 14% 65%;
+  --accent: 193 10% 16%;
+  --accent-foreground: 193.3 43.4% 67.5%;
+  --destructive: 354.4 53% 64.1%;
+  --destructive-foreground: 219 28% 94%;
+  --border: 217 17% 28%;
+  --input: 217 17% 28%;
+  --ring: 193.3 43.4% 67.5%;
+
+  --smui-frost-1: 178.7 25.1% 64.9%;
+  --smui-frost-2: 193.3 43.4% 67.5%;
+  --smui-frost-3: 210 34% 63.1%;
+  --smui-frost-4: 212.5 32.1% 43.9%;
+  --smui-green: 92.4 27.8% 64.7%;
+  --smui-yellow: 40 70.6% 73.3%;
+  --smui-orange: 14.4 50.5% 62.7%;
+  --smui-red: 354.4 53% 64.1%;
+  --smui-purple: 311.1 20.2% 63.1%;
+
+  --smui-surface-0: 216 16.1% 12.2%;
+  --smui-surface-1: 216.9 16.5% 15.5%;
+  --smui-surface-2: 216 15.8% 18.6%;
+  --smui-surface-3: 215.3 15.3% 21.8%;
+  --smui-border-hover: 220 16.5% 35.7%;
+}
+
+@theme inline {
+  --font-sans: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --text-label: 11px;
+  --text-ui: 13px;
+  --text-heading: 22px;
+  --text-stat: 26px;
+  --text-hero: 42px;
+
+  --radius-lg: var(--radius);
+  --radius-md: var(--radius);
+  --radius-sm: var(--radius);
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-smui-frost-1: hsl(var(--smui-frost-1));
+  --color-smui-frost-2: hsl(var(--smui-frost-2));
+  --color-smui-frost-3: hsl(var(--smui-frost-3));
+  --color-smui-frost-4: hsl(var(--smui-frost-4));
+  --color-smui-red: hsl(var(--smui-red));
+  --color-smui-orange: hsl(var(--smui-orange));
+  --color-smui-yellow: hsl(var(--smui-yellow));
+  --color-smui-green: hsl(var(--smui-green));
+  --color-smui-purple: hsl(var(--smui-purple));
+  --color-smui-surface-0: hsl(var(--smui-surface-0));
+  --color-smui-surface-1: hsl(var(--smui-surface-1));
+  --color-smui-surface-2: hsl(var(--smui-surface-2));
+  --color-smui-surface-3: hsl(var(--smui-surface-3));
+  --color-smui-border-hover: hsl(var(--smui-border-hover));
+}
+
+@layer base {
+  * { border-color: hsl(var(--border)); }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body {
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .card-glow { transition: border-color 0.15s; }
+  .card-glow:hover { border-color: hsl(var(--smui-border-hover)); }
+  .smui-label {
+    font-size: var(--text-label);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+  }
+  .smui-eyebrow {
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+  }
+}
+
+::selection { background: hsl(193 44% 67% / 0.2); color: hsl(193 44% 67%); }
+
+/* Respect users who ask for less motion; our previews animate a lot. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
