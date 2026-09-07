@@ -52,22 +52,32 @@ export function Range({
   label,
   value,
   suffix,
+  id,
   ...p
 }: React.InputHTMLAttributes<HTMLInputElement> & { label?: string; suffix?: string }) {
+  // Generate an id when the caller doesn't supply one, so the visible label is
+  // always programmatically associated with the input rather than just near it.
+  const autoId = React.useId();
+  const inputId = id ?? autoId;
   return (
     <div>
       {label ? (
         <div className="flex items-baseline justify-between mb-1">
-          <Label className="mb-0">{label}</Label>
-          <span className="text-label text-foreground tabular-nums">
+          <Label htmlFor={inputId} className="mb-0">
+            {label}
+          </Label>
+          <span className="text-label text-foreground tabular-nums" aria-hidden="true">
             {value}
             {suffix}
           </span>
         </div>
       ) : null}
       <input
+        id={inputId}
         type="range"
         value={value}
+        // The numeric readout is aria-hidden above; give AT the same info here.
+        aria-valuetext={suffix ? `${value}${suffix}` : undefined}
         className={cn("w-full accent-primary h-9", className)}
         {...p}
       />

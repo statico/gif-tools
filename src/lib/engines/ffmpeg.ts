@@ -24,8 +24,13 @@ export async function getFFmpeg(onProgress?: ProgressFn): Promise<FFmpeg> {
     loading = (async () => {
       const ff = new FFmpeg();
       await ff.load({
-        coreURL: "/ffmpeg/ffmpeg-core.js",
-        wasmURL: "/ffmpeg/ffmpeg-core.wasm",
+        // classWorkerURL keeps ffmpeg's worker classic; the bundled one becomes
+        // a module worker that can neither importScripts nor dynamic-import the core.
+        // Absolute: ffmpeg.wasm resolves these against its own module URL, so a
+        // root-relative path ends up as file:/// and the Worker refuses to load.
+        classWorkerURL: new URL("/ffmpeg/worker.js", location.href).href,
+        coreURL: new URL("/ffmpeg/ffmpeg-core.js", location.href).href,
+        wasmURL: new URL("/ffmpeg/ffmpeg-core.wasm", location.href).href,
       });
       instance = ff;
       return ff;
