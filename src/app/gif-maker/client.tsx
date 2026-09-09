@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { ArrowDown, ArrowUp, Trash2, Upload } from "lucide-react";
+import { ChevronLeft, ChevronRight, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ColorField, Input, Label, Select } from "@/components/ui/field";
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
@@ -57,6 +57,39 @@ function drawFrame(
   ctx.drawImage(frames[i].img, p.x, p.y, p.w, p.h);
 }
 
+/**
+ * Files from a drop, descending into dropped folders. Folder contents come
+ * back sorted numerically (frame2 before frame10) since that's the frame order
+ * anyone exporting a sequence expects; loose files keep their drop order.
+ */
+async function filesFromDrop(dt: DataTransfer): Promise<File[]> {
+  const entries = Array.from(dt.items, (i) => i.webkitGetAsEntry?.() ?? null);
+  if (!entries.some(Boolean)) return Array.from(dt.files);
+  const byName = (a: { name: string }, b: { name: string }) =>
+    a.name.localeCompare(b.name, undefined, { numeric: true });
+  const walk = async (entry: FileSystemEntry | null): Promise<File[]> => {
+    if (!entry) return [];
+    if (entry.isFile) {
+      return [await new Promise<File>((ok, err) => (entry as FileSystemFileEntry).file(ok, err))];
+    }
+    const reader = (entry as FileSystemDirectoryEntry).createReader();
+    const children: FileSystemEntry[] = [];
+    // readEntries returns in batches (Chrome caps at 100); drain it.
+    for (;;) {
+      const batch = await new Promise<FileSystemEntry[]>((ok, err) => reader.readEntries(ok, err));
+      if (!batch.length) break;
+      children.push(...batch);
+    }
+    children.sort(byName);
+    const out: File[] = [];
+    for (const c of children) out.push(...(await walk(c)));
+    return out;
+  };
+  const out: File[] = [];
+  for (const e of entries) out.push(...(await walk(e)));
+  return out;
+}
+
 function Body({ setBusy, setProgress, setError, publish }: ToolBodyProps) {
   const run = useRun({ setBusy, setError, setProgress });
   const [frames, setFrames] = React.useState<Frame[]>([]);
@@ -66,10 +99,13 @@ function Body({ setBusy, setProgress, setError, publish }: ToolBodyProps) {
   const [fit, setFit] = React.useState<Fit>("contain");
   const [bg, setBg] = React.useState("#000000");
   const [dragging, setDragging] = React.useState(false);
+  // Index of the frame card being dragged, and the slot it is hovering over.
+  const [dragFrom, setDragFrom] = React.useState<number | null>(null);
+  const [dragOver, setDragOver] = React.useState<number | null>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   const addFiles = React.useCallback(
-    async (list: FileList | null) => {
+    async (list: FileList | File[] | null) => {
       const files = Array.from(list ?? []).filter((f) => f.type.startsWith("image/"));
       if (!files.length) {
         setError("Those files aren't images. Pick PNG, JPEG, WebP or GIF files.");
@@ -100,14 +136,15 @@ function Body({ setBusy, setProgress, setError, publish }: ToolBodyProps) {
     [setError],
   );
 
-  const move = (i: number, dir: -1 | 1) =>
+  const reorder = (from: number, to: number) =>
     setFrames((prev) => {
-      const j = i + dir;
-      if (j < 0 || j >= prev.length) return prev;
+      if (from === to || to < 0 || to >= prev.length) return prev;
       const next = [...prev];
-      [next[i], next[j]] = [next[j], next[i]];
+      const [f] = next.splice(from, 1);
+      next.splice(to, 0, f);
       return next;
     });
+  const move = (i: number, dir: -1 | 1) => reorder(i, i + dir);
 
   // Loop the assembled animation at the real frame delay, so reordering a
   // frame or changing the fit shows up immediately rather than after an encode.
@@ -176,7 +213,10 @@ function Body({ setBusy, setProgress, setError, publish }: ToolBodyProps) {
         onDrop={(e) => {
           e.preventDefault();
           setDragging(false);
-          void addFiles(e.dataTransfer.files);
+          // A frame card dragged over this zone is not a file drop.
+          if (e.dataTransfer.types.includes("Files")) {
+            void filesFromDrop(e.dataTransfer).then(addFiles);
+          }
         }}
         className={`border border-dashed p-6 text-center transition-colors ${
           dragging ? "border-primary bg-accent" : "border-border"
@@ -196,7 +236,7 @@ function Body({ setBusy, setProgress, setError, publish }: ToolBodyProps) {
           }}
         />
         <Upload className="mx-auto mb-2 size-5 text-muted-foreground" aria-hidden="true" />
-        <p className="text-ui text-foreground mb-1">Drop several images here</p>
+        <p className="text-ui text-foreground mb-1">Drop several images, or a folder, here</p>
         <p className="text-label text-muted-foreground mb-3">
           they become frames in the order you add them — nothing leaves your device
         </p>
@@ -215,47 +255,84 @@ function Body({ setBusy, setProgress, setError, publish }: ToolBodyProps) {
           </span>
         </div>
         {frames.length ? (
-          <ul aria-labelledby="gif-maker-frames-label" className="grid gap-2">
+          <ul
+            aria-labelledby="gif-maker-frames-label"
+            className="grid grid-cols-[repeat(auto-fill,minmax(6rem,1fr))] gap-1.5"
+          >
             {frames.map((f, i) => (
               <li
                 key={f.id}
-                className="flex items-center gap-2 border border-border bg-smui-surface-0 p-2"
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.effectAllowed = "move";
+                  setDragFrom(i);
+                }}
+                onDragOver={(e) => {
+                  if (dragFrom === null) return;
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  setDragOver(i);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (dragFrom !== null) reorder(dragFrom, i);
+                  setDragFrom(null);
+                  setDragOver(null);
+                }}
+                onDragEnd={() => {
+                  setDragFrom(null);
+                  setDragOver(null);
+                }}
+                className={`group relative border bg-smui-surface-0 p-1 cursor-grab active:cursor-grabbing ${
+                  dragOver === i && dragFrom !== i ? "border-primary" : "border-border"
+                } ${dragFrom === i ? "opacity-40" : ""}`}
               >
-                <span className="text-label text-muted-foreground tabular-nums w-6 shrink-0">
-                  {i + 1}
-                </span>
                 <img
                   src={f.url}
                   alt=""
-                  className="size-10 object-contain border border-border shrink-0"
+                  draggable={false}
+                  className="checkerboard aspect-square w-full object-contain"
                 />
-                <span className="text-ui text-foreground truncate min-w-0 flex-1">{f.name}</span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  aria-label={`Move frame ${i + 1} up`}
-                  disabled={i === 0}
-                  onClick={() => move(i, -1)}
+                <span className="absolute top-1 left-1 bg-background/80 px-1 text-label text-foreground tabular-nums">
+                  {i + 1}
+                </span>
+                <span
+                  className="block truncate text-label text-muted-foreground mt-1"
+                  title={f.name}
                 >
-                  <ArrowUp aria-hidden="true" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  aria-label={`Move frame ${i + 1} down`}
-                  disabled={i === frames.length - 1}
-                  onClick={() => move(i, 1)}
-                >
-                  <ArrowDown aria-hidden="true" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  aria-label={`Delete frame ${i + 1}`}
-                  onClick={() => remove(i)}
-                >
-                  <Trash2 aria-hidden="true" />
-                </Button>
+                  {f.name}
+                </span>
+                <span className="absolute top-1 right-1 flex gap-px opacity-0 group-hover:opacity-100 group-focus-within:opacity-100">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-6 bg-background/90"
+                    aria-label={`Move frame ${i + 1} earlier`}
+                    disabled={i === 0}
+                    onClick={() => move(i, -1)}
+                  >
+                    <ChevronLeft aria-hidden="true" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-6 bg-background/90"
+                    aria-label={`Move frame ${i + 1} later`}
+                    disabled={i === frames.length - 1}
+                    onClick={() => move(i, 1)}
+                  >
+                    <ChevronRight aria-hidden="true" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-6 bg-background/90"
+                    aria-label={`Delete frame ${i + 1}`}
+                    onClick={() => remove(i)}
+                  >
+                    <Trash2 aria-hidden="true" />
+                  </Button>
+                </span>
               </li>
             ))}
           </ul>
