@@ -173,8 +173,8 @@ function Body({
   const [underline, setUnderline] = React.useState<Underline>("double");
   const [thick, setThick] = React.useState(9);
   const [size, setSize] = React.useState(128);
-  const [transparent, setTransparent] = React.useState(true);
-  const [bg, setBg] = React.useState("#ffffff");
+  const [bg, setBg] = React.useState(""); // "" = transparent
+  const transparent = !bg;
   const [anim, setAnim] = React.useState<Anim>("pulse");
 
   const opts: Opts = {
@@ -334,14 +334,7 @@ function Body({
 
       <div className="grid gap-3">
         <Checkbox label="Italic" checked={italic} onChange={(e) => setItalic(e.target.checked)} />
-        <Checkbox
-          label="Transparent background"
-          checked={transparent}
-          onChange={(e) => setTransparent(e.target.checked)}
-        />
-        {!transparent ? (
-          <ColorField id="num-bg" label="background colour" value={bg} onChange={setBg} />
-        ) : null}
+        <ColorField id="num-bg" label="background colour" value={bg} onChange={setBg} clearable />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
