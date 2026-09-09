@@ -19,7 +19,9 @@ export function ToolPage({ slug, children }: { slug: string; children: React.Rea
             </Link>
           </li>
           <ChevronRight className="size-3" aria-hidden="true" />
-          <li>{CATEGORIES[tool.category].label}</li>
+          <li style={{ color: `hsl(${CATEGORIES[tool.category].tone})` }}>
+            {CATEGORIES[tool.category].label}
+          </li>
           <ChevronRight className="size-3" aria-hidden="true" />
           <li aria-current="page" className="text-foreground">
             {tool.name}
@@ -28,7 +30,7 @@ export function ToolPage({ slug, children }: { slug: string; children: React.Rea
       </nav>
 
       <div className="mb-5">
-        <h1 className="text-heading text-foreground tracking-tight mb-1.5">{tool.title}</h1>
+        <h1 className="font-display text-heading text-foreground mb-1.5">{tool.title}</h1>
         <p className="text-sm text-muted-foreground max-w-3xl">{tool.description}</p>
       </div>
 

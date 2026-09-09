@@ -18,14 +18,31 @@ export interface Tool {
   keywords: string[];
 }
 
-export const CATEGORIES: Record<ToolCategory, { label: string; description: string }> = {
+/** smui accent (HSL triplet variable) used for a category's heading, icons and card edge. */
+export const CATEGORIES: Record<
+  ToolCategory,
+  { label: string; description: string; tone: string }
+> = {
   convert: {
     label: "convert",
     description: "Move between video, GIF, WebP, APNG and still images.",
+    tone: "var(--smui-frost-2)",
   },
-  edit: { label: "edit", description: "Resize, crop, trim, rotate, caption and apply effects." },
-  optimize: { label: "optimize", description: "Shrink files without wrecking them." },
-  emoji: { label: "emoji", description: "Slack-ready animated emoji and text generators." },
+  edit: {
+    label: "edit",
+    description: "Resize, crop, trim, rotate, caption and apply effects.",
+    tone: "var(--smui-green)",
+  },
+  optimize: {
+    label: "optimize",
+    description: "Shrink files without wrecking them.",
+    tone: "var(--smui-yellow)",
+  },
+  emoji: {
+    label: "emoji",
+    description: "Slack-ready animated emoji and text generators.",
+    tone: "var(--smui-purple)",
+  },
 };
 
 export const TOOLS: Tool[] = [

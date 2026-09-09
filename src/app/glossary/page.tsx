@@ -31,7 +31,7 @@ export default function Page() {
           },
         })}
       />
-      <h1 className="text-heading text-foreground tracking-tight mb-1.5">GIF glossary</h1>
+      <h1 className="font-display text-heading text-foreground mb-1.5">GIF glossary</h1>
       <p className="text-sm text-muted-foreground max-w-3xl mb-6">
         The terms these tools use, defined once. Every setting on every page means one of these
         things.
