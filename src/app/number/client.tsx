@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox, ColorField, Input, Label, Range, Select } from "@/components/ui/field";
 import { ToolShell, useAutoRun, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { encodeGif, renderFrames } from "@/lib/engines/gif-encode";
-import { BRUSH, SANS, useBrushFont } from "@/lib/brush-font";
+import { FACES, faceOptions, useFace, type FaceId } from "@/lib/fonts";
 import { getTool } from "@/lib/tools";
 import { inkMetrics } from "@/lib/utils";
 
@@ -15,14 +15,13 @@ interface Style {
   fill2: string;
   stroke: string;
   glow: boolean;
-  brush?: boolean;
 }
 
 const PRESETS: { id: string; label: string; style: Style }[] = [
   {
     id: "classic",
     label: "classic 100",
-    style: { fill: "#dd2e44", fill2: "#dd2e44", stroke: "", glow: false, brush: true },
+    style: { fill: "#dd2e44", fill2: "#dd2e44", stroke: "", glow: false },
   },
   {
     id: "gold",
@@ -58,6 +57,7 @@ interface Opts extends Style {
   bg: string;
   transparent: boolean;
   anims: Anim[];
+  face: FaceId;
 }
 
 /** Draw one frame. `t` is 0..1 through the animation loop. */
@@ -75,7 +75,7 @@ function draw(ctx: CanvasRenderingContext2D, S: number, o: Opts, t: number) {
   const uBlock = o.underline === "none" ? 0 : o.underline === "single" ? th : th * 3;
   const uSpace = uBlock ? uBlock + S * 0.07 : 0;
   const textH = Math.max(1, inner - uSpace);
-  const font = (px: number) => `${o.italic ? "italic " : ""}900 ${px}px ${o.brush ? BRUSH : SANS}`;
+  const font = (px: number) => `${o.italic ? "italic " : ""}900 ${px}px ${FACES[o.face].family}`;
 
   // Auto-fit: measure at a reference size, then scale down to the tighter of
   // the width and height budgets so 4-digit numbers never clip.
@@ -134,7 +134,7 @@ function draw(ctx: CanvasRenderingContext2D, S: number, o: Opts, t: number) {
     const ux = Math.min(tw, inner) / 2;
     let uy = textH / 2 + S * 0.05;
     const bar = () => {
-      if (o.brush) {
+      if (o.face !== "impact") {
         // Two loose swoops, like the strokes under the emoji.
         ctx.strokeStyle = paint;
         ctx.lineCap = "round";
@@ -187,7 +187,8 @@ function Body({
   const [size, setSize] = React.useState(128);
   const [bg, setBg] = React.useState(""); // "" = transparent
   const transparent = !bg;
-  const fontReady = useBrushFont();
+  const [face, setFace] = React.useState<FaceId>("caveat");
+  const fontReady = useFace(face);
 
   const opts: Opts = {
     ...style,
@@ -198,6 +199,7 @@ function Body({
     bg,
     transparent,
     anims,
+    face,
   };
   const optsRef = React.useRef(opts);
   optsRef.current = opts;
@@ -240,7 +242,7 @@ function Body({
     setStyle(p.style);
   };
 
-  useAutoRun(go, [text, format, style, italic, underline, thick, size, anims], fontReady);
+  useAutoRun(go, [text, format, style, italic, underline, thick, size, anims, face], fontReady);
   return (
     <>
       <div>
@@ -315,6 +317,12 @@ function Body({
         ) : (
           <div />
         )}
+        <div>
+          <Label htmlFor="num-font">typeface</Label>
+          <Select id="num-font" value={face} onChange={(e) => setFace(e.target.value as FaceId)}>
+            {faceOptions("caveat")}
+          </Select>
+        </div>
         <div>
           <Label htmlFor="num-size">size</Label>
           <Select id="num-size" value={size} onChange={(e) => setSize(Number(e.target.value))}>
