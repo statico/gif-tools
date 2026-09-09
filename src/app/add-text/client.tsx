@@ -113,18 +113,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   });
   const set = <K extends keyof Style>(k: K, v: Style[K]) =>
     setStyle((prev) => ({ ...prev, [k]: v }));
-  const previewRef = React.useRef<HTMLCanvasElement>(null);
-
-  // Live preview of the first frame.
-  React.useEffect(() => {
-    const canvas = previewRef.current;
-    if (!canvas || !frames.length) return;
-    try {
-      compose(canvas, frames[0], style);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }, [frames, style, setError]);
 
   const go = () =>
     run("Adding text", async () => {
@@ -210,25 +198,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
             onChange={(v) => set("barColor", v)}
           />
         ) : null}
-      </div>
-
-      <div>
-        <Label htmlFor="at-preview">preview — first frame</Label>
-        <div className="border border-border bg-smui-surface-0 p-2 flex justify-center">
-          {frames.length ? (
-            <canvas
-              id="at-preview"
-              ref={previewRef}
-              aria-label="Preview of the first frame with your caption"
-              role="img"
-              className="max-w-full max-h-72 object-contain"
-            />
-          ) : (
-            <p className="text-ui text-muted-foreground" aria-live="polite">
-              Choose a GIF or image to see the preview.
-            </p>
-          )}
-        </div>
       </div>
 
       {truncated ? (
