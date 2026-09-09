@@ -7,7 +7,7 @@ import { Input, Label } from "@/components/ui/field";
 import { HistoryPicker } from "@/components/history-picker";
 import { usePublishCarry, type Carry } from "@/components/tool-strip";
 import { download, mimeFor } from "@/lib/download";
-import { addToHistory, takeHandoff } from "@/lib/history";
+import { addToHistory, loadSource, sourceIdFromHash, stashSource } from "@/lib/history";
 import { cn, formatBytes, gifInfo, slugify, type GifInfo } from "@/lib/utils";
 import type { Tool } from "@/lib/tools";
 
@@ -119,9 +119,18 @@ export function ToolShell({
     });
   }, []);
 
+  // Id of the stashed copy the URL hash points at, so back/forward can reload it.
+  const sourceId = React.useRef<string | null>(null);
   const onPick = React.useCallback(
-    (f: File | null) => {
+    (f: File | null, id?: string) => {
       if (!f) return;
+      if (id) sourceId.current = id;
+      else
+        void stashSource(f, f.name).then((sid) => {
+          if (!sid) return;
+          sourceId.current = sid;
+          window.history.replaceState(window.history.state, "", `#s=${sid}`);
+        });
       setFile(f);
       setResult(null);
       setError(null);
@@ -143,12 +152,16 @@ export function ToolShell({
     [tool.slug, nameEdited],
   );
 
-  // A file handed over from another tool's strip becomes this tool's source.
-  const tookHandoff = React.useRef(false);
+  // The URL hash names the file: on load, and whenever back/forward changes it.
   React.useEffect(() => {
-    if (tookHandoff.current) return;
-    tookHandoff.current = true;
-    void takeHandoff().then((f) => f && onPick(f));
+    const sync = () => {
+      const id = sourceIdFromHash(window.location.hash);
+      if (!id || id === sourceId.current) return;
+      void loadSource(id).then((f) => f && onPick(f, id));
+    };
+    sync();
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
   }, [onPick]);
 
   // Pasting an image anywhere on the page loads it, like a drop would.
@@ -167,21 +180,21 @@ export function ToolShell({
   const resultMime = result ? (result.mime ?? mimeFor(`x.${result.ext}`)) : null;
   const carry = React.useMemo<Carry | null>(
     () =>
-      result
+      file || result
         ? {
-            file: new File(
-              [result.data.slice().buffer as ArrayBuffer],
-              `${slugify(name, tool.slug)}.${result.ext}`,
-              {
-                type: resultMime ?? "application/octet-stream",
-              },
-            ),
-            kind: "result",
-            url: resultMime?.startsWith("image/") ? previewUrl : null,
+            source: file ? { file, url: file.type.startsWith("image/") ? sourceUrl : null } : null,
+            result: result
+              ? {
+                  file: new File(
+                    [result.data.slice().buffer as ArrayBuffer],
+                    `${slugify(name, tool.slug)}.${result.ext}`,
+                    { type: resultMime ?? "application/octet-stream" },
+                  ),
+                  url: resultMime?.startsWith("image/") ? previewUrl : null,
+                }
+              : null,
           }
-        : file
-          ? { file, kind: "source", url: file.type.startsWith("image/") ? sourceUrl : null }
-          : null,
+        : null,
     [result, resultMime, name, tool.slug, previewUrl, file, sourceUrl],
   );
   usePublishCarry(carry);
