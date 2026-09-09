@@ -11,7 +11,8 @@ import {
   getBlob,
   readIndex,
   removeFromHistory,
-  setHandoff,
+  sourceHref,
+  stashSource,
   type HistoryEntry,
 } from "@/lib/history";
 import { TOOLS } from "@/lib/tools";
@@ -88,8 +89,7 @@ export default function HistoryClient() {
       setError(`The file for ${entry.filename} is no longer stored in this browser.`);
       return;
     }
-    await setHandoff(blob, entry.filename);
-    router.push(`/${slug}/`);
+    router.push(sourceHref(slug, await stashSource(blob, entry.filename)));
   };
 
   return (

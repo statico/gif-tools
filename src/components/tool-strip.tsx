@@ -3,18 +3,22 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { TOOL_ICONS } from "@/components/tool-icons";
-import { setHandoff } from "@/lib/history";
+import { sourceHref, stashSource } from "@/lib/history";
 import { CATEGORIES, TOOLS, type ToolCategory } from "@/lib/tools";
 import { cn } from "@/lib/utils";
 
 const ORDER: ToolCategory[] = ["convert", "edit", "optimize", "emoji"];
 
-/** What follows you to the next tool: the result if there is one, else the source. */
-export interface Carry {
+export interface CarryItem {
   file: File;
-  kind: "source" | "result";
   /** Object URL for a thumbnail, when the file is an image. */
   url: string | null;
+}
+
+/** What can follow you to the next tool; the strip's switch picks which. */
+export interface Carry {
+  source: CarryItem | null;
+  result: CarryItem | null;
 }
 
 // The strip sits above the heading (server-rendered, so the links are in the
@@ -48,31 +52,19 @@ export function usePublishCarry(carry: Carry | null) {
 export function ToolStrip() {
   const router = useRouter();
   const carry = React.useContext(CarryValue);
+  const [pick, setPick] = React.useState<"source" | "result">("result");
   const current = usePathname().split("/")[1];
   if (!TOOLS.some((t) => t.slug === current)) return null;
-  const go = async (e: React.MouseEvent, href: string) => {
-    if (!carry || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+  const chosen = carry?.result && pick === "result" ? carry.result : (carry?.source ?? null);
+  const go = async (e: React.MouseEvent, slug: string) => {
+    if (!chosen || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
     e.preventDefault();
-    await setHandoff(carry.file, carry.file.name);
-    router.push(href);
+    router.push(sourceHref(slug, await stashSource(chosen.file, chosen.file.name)));
   };
 
   return (
     <nav aria-label="Switch tool" className="border-b border-border bg-card px-3 py-1.5 sm:px-5">
       <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
-        {carry ? (
-          <span
-            className="mr-2 flex items-center gap-2 border-r border-border pr-3 text-label text-muted-foreground"
-            title={`Pick a tool to continue with this ${carry.kind}`}
-          >
-            {carry.url ? (
-              <img src={carry.url} alt="" className="checkerboard size-5 object-contain" />
-            ) : null}
-            <span className="whitespace-nowrap">
-              {carry.kind} <span aria-hidden="true">→</span>
-            </span>
-          </span>
-        ) : null}
         {ORDER.map((cat) => (
           <ul key={cat} aria-label={CATEGORIES[cat].label} className="contents">
             {TOOLS.filter((t) => t.category === cat).map((t) => {
@@ -83,7 +75,7 @@ export function ToolStrip() {
                   <Link
                     href={`/${t.slug}/`}
                     aria-current={active ? "page" : undefined}
-                    onClick={(e) => void go(e, `/${t.slug}/`)}
+                    onClick={(e) => void go(e, t.slug)}
                     className={cn(
                       "flex h-7 items-center gap-1.5 whitespace-nowrap border px-2 text-label uppercase tracking-[1.5px] transition-colors",
                       active
@@ -104,6 +96,38 @@ export function ToolStrip() {
             })}
           </ul>
         ))}
+        {carry ? (
+          <div
+            role="radiogroup"
+            aria-label="File to pass to the next tool"
+            className="ml-auto flex items-center border border-border pl-2 text-label text-muted-foreground"
+          >
+            <span className="mr-1 whitespace-nowrap">next tool gets</span>
+            {(["source", "result"] as const).map((kind) => {
+              const item = carry[kind];
+              const on = chosen === item;
+              return (
+                <button
+                  key={kind}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  disabled={!item}
+                  onClick={() => setPick(kind)}
+                  className={cn(
+                    "flex h-7 items-center gap-1.5 px-2 uppercase tracking-[1.5px] transition-colors disabled:opacity-40",
+                    on ? "bg-secondary text-foreground" : "hover:text-foreground",
+                  )}
+                >
+                  {item?.url ? (
+                    <img src={item.url} alt="" className="checkerboard size-4 object-contain" />
+                  ) : null}
+                  {kind}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
     </nav>
   );
