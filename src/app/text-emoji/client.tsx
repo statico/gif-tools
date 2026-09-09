@@ -19,6 +19,7 @@ interface Style {
   bg: string;
   transparent: boolean;
   stroke: string;
+  stroke2: string;
   strokeW: number;
   italic: boolean;
   glow: boolean;
@@ -31,6 +32,7 @@ const base: Style = {
   bg: "#000000",
   transparent: true,
   stroke: "#12161c",
+  stroke2: "",
   strokeW: 8,
   italic: false,
   glow: false,
@@ -87,6 +89,18 @@ const PRESETS: { id: string; label: string; style: Style }[] = [
     style: { ...base, fill: "#ffb02e", fill2: "#ff2e88", stroke: "#2a0d1e", strokeW: 7 },
   },
   {
+    id: "bubblegum",
+    label: "bubblegum",
+    style: {
+      ...base,
+      fill: "#ff5fcf",
+      fill2: "#c04cff",
+      stroke: "#4fb3ff",
+      stroke2: "#2f7de1",
+      strokeW: 9,
+    },
+  },
+  {
     id: "sticker",
     label: "sticker",
     style: {
@@ -113,8 +127,16 @@ interface Opts extends Style {
   anim: Anim | null;
 }
 
+/** A typed `\n` (or a real newline) forces a line break and overrides the line count. */
+function forcedLines(text: string): string[] | null {
+  const parts = text.split(/\\n|\n/).map((s) => s.trim());
+  return parts.length > 1 ? parts.filter(Boolean) : null;
+}
+
 /** Split a phrase across n lines, keeping the lines roughly equal in length. */
 function splitLines(text: string, n: number): string[] {
+  const forced = forcedLines(text);
+  if (forced) return forced.length ? forced : [""];
   const words = text.trim().split(/\s+/).filter(Boolean);
   if (!words.length) return [""];
   if (n <= 1 || words.length === 1) return [words.join(" ")];
@@ -137,6 +159,8 @@ function splitLines(text: string, n: number): string[] {
 
 /** Auto line count: one word per line up to three lines. */
 function autoLines(text: string): number {
+  const forced = forcedLines(text);
+  if (forced) return Math.max(1, forced.length);
   const words = text.trim().split(/\s+/).filter(Boolean).length;
   return Math.min(3, Math.max(1, words));
 }
@@ -192,17 +216,17 @@ function draw(ctx: CanvasRenderingContext2D, S: number, o: Opts, t: number) {
   }
   ctx.translate(-S / 2, -S / 2);
 
-  let paint: string | CanvasGradient;
-  if (o.anim === "rainbow") {
-    paint = `hsl(${Math.round(t * 360)} 92% 58%)`;
-  } else if (o.fill2 !== o.fill) {
+  // Top-to-bottom gradient across the whole block when the two colours differ.
+  const grad = (a: string, b: string) => {
+    if (!b || a === b) return a;
     const g = ctx.createLinearGradient(0, margin, 0, margin + inner);
-    g.addColorStop(0, o.fill);
-    g.addColorStop(1, o.fill2);
-    paint = g;
-  } else {
-    paint = o.fill;
-  }
+    g.addColorStop(0, a);
+    g.addColorStop(1, b);
+    return g;
+  };
+  const paint =
+    o.anim === "rainbow" ? `hsl(${Math.round(t * 360)} 92% 58%)` : grad(o.fill, o.fill2);
+  const strokePaint = grad(o.stroke || "#000000", o.stroke2);
 
   for (const l of laid) {
     y += l.asc;
@@ -225,7 +249,7 @@ function draw(ctx: CanvasRenderingContext2D, S: number, o: Opts, t: number) {
     if (o.strokeW > 0) {
       ctx.lineJoin = "round";
       ctx.lineWidth = (l.fs * o.strokeW) / 100;
-      ctx.strokeStyle = o.stroke || "#000000";
+      ctx.strokeStyle = strokePaint;
       ctx.strokeText(l.line, -l.dx, 0);
     }
     ctx.shadowColor = "transparent";
@@ -338,7 +362,8 @@ function Body({
             aria-describedby="te-text-hint"
           />
           <p id="te-text-hint" className="text-label text-muted-foreground mt-1">
-            Short is best — each line is stretched to fill the square.
+            Short is best — each line is stretched to fill the square. Type \n to force a line
+            break.
           </p>
         </div>
         <div>
@@ -380,13 +405,34 @@ function Body({
           id="te-fill"
           label="text colour"
           value={style.fill}
-          onChange={(v) => setStyle((s) => ({ ...s, fill: v, fill2: v }))}
+          // The bottom colour follows the top one until it is set on its own.
+          onChange={(v) =>
+            setStyle((s) => ({ ...s, fill: v, fill2: s.fill2 === s.fill ? v : s.fill2 }))
+          }
+        />
+        <ColorField
+          id="te-fill2"
+          label="text colour (bottom)"
+          value={style.fill2}
+          onChange={(v) => set("fill2", v)}
         />
         <ColorField
           id="te-stroke"
           label="outline colour"
           value={style.stroke || "#000000"}
-          onChange={(v) => set("stroke", v)}
+          onChange={(v) =>
+            setStyle((s) => ({
+              ...s,
+              stroke: v,
+              stroke2: !s.stroke2 || s.stroke2 === s.stroke ? v : s.stroke2,
+            }))
+          }
+        />
+        <ColorField
+          id="te-stroke2"
+          label="outline colour (bottom)"
+          value={style.stroke2 || style.stroke || "#000000"}
+          onChange={(v) => set("stroke2", v)}
         />
       </div>
 
