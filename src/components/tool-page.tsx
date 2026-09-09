@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { CATEGORIES, getTool, toolsIn } from "@/lib/tools";
+import { CATEGORIES, getTool } from "@/lib/tools";
 import { JsonLd, toolJsonLd } from "@/lib/seo";
 
 /** Shared chrome for every tool route: breadcrumb, heading, JSON-LD, siblings. */
 export function ToolPage({ slug, children }: { slug: string; children: React.ReactNode }) {
   const tool = getTool(slug);
-  const siblings = toolsIn(tool.category).filter((t) => t.slug !== slug);
 
   return (
     <>
@@ -35,24 +34,6 @@ export function ToolPage({ slug, children }: { slug: string; children: React.Rea
       </div>
 
       {children}
-
-      <section aria-labelledby="related" className="mt-10">
-        <h2 id="related" className="smui-eyebrow mb-2">
-          more {CATEGORIES[tool.category].label} tools
-        </h2>
-        <ul className="flex flex-wrap gap-2">
-          {siblings.map((t) => (
-            <li key={t.slug}>
-              <Link
-                href={`/${t.slug}/`}
-                className="inline-block border border-border px-2.5 py-1 text-ui text-muted-foreground hover:text-foreground hover:border-smui-border-hover transition-colors"
-              >
-                {t.name}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
     </>
   );
 }

@@ -1,17 +1,24 @@
 "use client";
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Download, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Select } from "@/components/ui/field";
 import { download } from "@/lib/download";
 import {
   clearHistory,
   getBlob,
   readIndex,
   removeFromHistory,
+  setHandoff,
   type HistoryEntry,
 } from "@/lib/history";
+import { TOOLS } from "@/lib/tools";
 import { formatBytes } from "@/lib/utils";
+
+// Generators take no input, so there is nothing to open them with.
+const OPENERS = TOOLS.filter((t) => !["number", "text-emoji"].includes(t.slug));
 
 export default function HistoryClient() {
   const [entries, setEntries] = React.useState<HistoryEntry[] | null>(null);
@@ -21,6 +28,7 @@ export default function HistoryClient() {
   const refocus = React.useRef(false);
 
   const refresh = React.useCallback(() => setEntries(readIndex()), []);
+  const router = useRouter();
 
   React.useEffect(() => {
     if (!refocus.current) return;
@@ -72,6 +80,16 @@ export default function HistoryClient() {
     }
     setError(null);
     download(blob, entry.filename, entry.mime);
+  };
+
+  const openIn = async (entry: HistoryEntry, slug: string) => {
+    const blob = await getBlob(entry.id);
+    if (!blob) {
+      setError(`The file for ${entry.filename} is no longer stored in this browser.`);
+      return;
+    }
+    await setHandoff(blob, entry.filename);
+    router.push(`/${slug}/`);
   };
 
   return (
@@ -135,7 +153,20 @@ export default function HistoryClient() {
                       {e.note}
                     </p>
                   ) : null}
-                  <div className="flex gap-1 mt-1.5">
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    <Select
+                      aria-label={`Open ${e.filename} in a tool`}
+                      value=""
+                      className="h-8 w-auto text-label"
+                      onChange={(ev) => ev.target.value && void openIn(e, ev.target.value)}
+                    >
+                      <option value="">Open in…</option>
+                      {OPENERS.map((t) => (
+                        <option key={t.slug} value={t.slug}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </Select>
                     <Button
                       variant="outline"
                       size="sm"

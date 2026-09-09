@@ -148,6 +148,36 @@ async function save(
   return record;
 }
 
+/**
+ * One-slot hand-off between tools: the strip on a tool page stashes the
+ * current source or result here, navigates, and the next tool's shell takes
+ * it as its input. Lives in the same store under a reserved key; stale slots
+ * (a cancelled navigation) are ignored after a minute.
+ */
+const HANDOFF_KEY = "handoff";
+
+export async function setHandoff(blob: Blob, name: string): Promise<void> {
+  if (!canUse()) return;
+  await tx("readwrite", (s) => s.put({ blob, name, at: Date.now() }, HANDOFF_KEY)).catch(
+    () => undefined,
+  );
+}
+
+export async function takeHandoff(): Promise<File | null> {
+  if (!canUse()) return null;
+  try {
+    const rec = await tx<{ blob: Blob; name: string; at: number } | undefined>("readonly", (s) =>
+      s.get(HANDOFF_KEY),
+    );
+    if (!rec) return null;
+    await tx("readwrite", (s) => s.delete(HANDOFF_KEY));
+    if (Date.now() - rec.at > 60_000) return null;
+    return new File([rec.blob], rec.name, { type: rec.blob.type });
+  } catch {
+    return null;
+  }
+}
+
 export async function getBlob(id: string): Promise<Blob | null> {
   if (!canUse()) return null;
   try {
