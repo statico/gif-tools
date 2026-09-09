@@ -149,34 +149,47 @@ async function save(
 }
 
 /**
- * One-slot hand-off between tools: the strip on a tool page stashes the
- * current source or result here, navigates, and the next tool's shell takes
- * it as its input. Lives in the same store under a reserved key; stale slots
- * (a cancelled navigation) are ignored after a minute.
+ * Files that a URL can point back at. Picking a file (or handing one to the
+ * next tool) stashes it under an id and puts `#s=<id>` in the URL, so the
+ * back button lands on the previous tool with its file still loaded. Same
+ * store, reserved prefix; only the newest few are kept.
  */
-const HANDOFF_KEY = "handoff";
+const SOURCE_PREFIX = "src:";
+const MAX_SOURCES = 20;
 
-export async function setHandoff(blob: Blob, name: string): Promise<void> {
-  if (!canUse()) return;
-  await tx("readwrite", (s) => s.put({ blob, name, at: Date.now() }, HANDOFF_KEY)).catch(
-    () => undefined,
-  );
-}
-
-export async function takeHandoff(): Promise<File | null> {
+export async function stashSource(blob: Blob, name: string): Promise<string | null> {
   if (!canUse()) return null;
+  const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   try {
-    const rec = await tx<{ blob: Blob; name: string; at: number } | undefined>("readonly", (s) =>
-      s.get(HANDOFF_KEY),
+    await tx("readwrite", (s) => s.put({ blob, name }, SOURCE_PREFIX + id));
+    const keys = (await tx<IDBValidKey[]>("readonly", (s) => s.getAllKeys())).filter(
+      (k): k is string => typeof k === "string" && k.startsWith(SOURCE_PREFIX),
     );
-    if (!rec) return null;
-    await tx("readwrite", (s) => s.delete(HANDOFF_KEY));
-    if (Date.now() - rec.at > 60_000) return null;
-    return new File([rec.blob], rec.name, { type: rec.blob.type });
+    // Ids are time-ordered, so sorting the keys sorts by age.
+    const old = keys.sort().slice(0, Math.max(0, keys.length - MAX_SOURCES));
+    await Promise.all(old.map((k) => tx("readwrite", (s) => s.delete(k)).catch(() => undefined)));
+    return id;
   } catch {
     return null;
   }
 }
+
+export async function loadSource(id: string): Promise<File | null> {
+  if (!canUse()) return null;
+  try {
+    const rec = await tx<{ blob: Blob; name: string } | undefined>("readonly", (s) =>
+      s.get(SOURCE_PREFIX + id),
+    );
+    return rec ? new File([rec.blob], rec.name, { type: rec.blob.type }) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Where a tool page lives when opened with this stashed file. */
+export const sourceHref = (slug: string, id: string | null) => `/${slug}/${id ? `#s=${id}` : ""}`;
+
+export const sourceIdFromHash = (hash: string) => /^#s=([a-z0-9]+)$/.exec(hash)?.[1] ?? null;
 
 export async function getBlob(id: string): Promise<Blob | null> {
   if (!canUse()) return null;
