@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /** Uppercase smui field label wired to its control. */
@@ -104,42 +105,68 @@ export function Checkbox({
   );
 }
 
-/** Colour swatch plus a hex input, kept in sync. Shared by the emoji generators. */
+/**
+ * Colour swatch plus a hex input, kept in sync. With `clearable`, an X button
+ * sets the value to "" meaning transparent / no colour, and the swatch shows a
+ * checkerboard until a colour is picked again.
+ */
 export function ColorField({
   id,
   label,
   value,
   onChange,
+  clearable = false,
 }: {
   id: string;
   label: string;
   value: string;
   onChange: (v: string) => void;
+  clearable?: boolean;
 }) {
   const [text, setText] = React.useState(value);
   React.useEffect(() => setText(value), [value]);
-  const valid = /^#[0-9a-fA-F]{6}$/.test(text);
+  const none = clearable && value === "";
+  const valid = /^#[0-9a-fA-F]{6}$/.test(text) || (clearable && text === "");
   return (
     <div>
       <Label htmlFor={id}>{label}</Label>
       <div className="flex gap-2">
-        <input
-          id={id}
-          type="color"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="h-9 w-12 shrink-0 border border-input bg-background p-1"
-        />
+        <span
+          className={cn("relative h-9 w-12 shrink-0", none && "checkerboard border border-input")}
+        >
+          <input
+            id={id}
+            type="color"
+            value={none ? "#000000" : value}
+            onChange={(e) => onChange(e.target.value)}
+            className={cn("h-9 w-12 border border-input bg-background p-1", none && "opacity-0")}
+          />
+        </span>
         <Input
           aria-label={`${label} hex value`}
           value={text}
+          placeholder={clearable ? "transparent" : undefined}
           spellCheck={false}
           aria-invalid={!valid}
           onChange={(e) => {
-            setText(e.target.value);
-            if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) onChange(e.target.value);
+            const v = e.target.value;
+            setText(v);
+            if (/^#[0-9a-fA-F]{6}$/.test(v) || (clearable && v === "")) onChange(v);
           }}
         />
+        {clearable ? (
+          <button
+            type="button"
+            aria-label={`${label}: none (transparent)`}
+            aria-pressed={none}
+            title="No colour (transparent)"
+            disabled={none}
+            onClick={() => onChange("")}
+            className="h-9 w-9 shrink-0 border border-input text-muted-foreground hover:text-foreground hover:border-smui-border-hover disabled:opacity-40 disabled:hover:text-muted-foreground disabled:hover:border-input flex items-center justify-center"
+          >
+            <X className="size-4" aria-hidden="true" />
+          </button>
+        ) : null}
       </div>
     </div>
   );

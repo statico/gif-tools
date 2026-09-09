@@ -66,7 +66,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
     canvas.width = Math.max(1, Math.round(ow * k));
     canvas.height = Math.max(1, Math.round(oh * k));
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (turn === "custom" && HEX.test(bg)) {
+    if (turn === "custom" && bg && HEX.test(bg)) {
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
@@ -81,7 +81,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   const go = () =>
     run("Rotating", async () => {
       if (!file) throw new Error("Choose a GIF, image or video first.");
-      if (turn === "custom" && !HEX.test(bg)) {
+      if (turn === "custom" && bg && !HEX.test(bg)) {
         throw new Error("Background colour must be a six-digit hex value like #1a1a1a.");
       }
 
@@ -89,7 +89,10 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       if (turn === "custom") {
         if (!Number.isFinite(angle)) throw new Error("Enter a rotation angle in degrees.");
         const rad = `${angle}*PI/180`;
-        parts.push(`rotate=${rad}:fillcolor=0x${bg.slice(1)}:ow=rotw(${rad}):oh=roth(${rad})`);
+        // Video can't carry alpha, so an empty (transparent) colour falls back to black there.
+        const ext = outputExt(file);
+        const fill = bg ? `0x${bg.slice(1)}` : ext === "mp4" || ext === "webm" ? "black" : "none";
+        parts.push(`rotate=${rad}:fillcolor=${fill}:ow=rotw(${rad}):oh=roth(${rad})`);
       } else if (TURNS[turn]) {
         parts.push(TURNS[turn]);
       }
@@ -158,7 +161,13 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       </div>
 
       {turn === "custom" ? (
-        <ColorField id="rotate-bg" label="corner background colour" value={bg} onChange={setBg} />
+        <ColorField
+          id="rotate-bg"
+          label="corner background colour"
+          value={bg}
+          onChange={setBg}
+          clearable
+        />
       ) : null}
 
       <div className="grid gap-3">

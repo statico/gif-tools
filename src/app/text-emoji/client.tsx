@@ -445,19 +445,16 @@ function Body({
       />
 
       <div className="grid gap-3">
-        <Checkbox
-          label="Transparent background"
-          checked={style.transparent}
-          onChange={(e) => set("transparent", e.target.checked)}
+        <ColorField
+          id="te-bg"
+          label="background colour"
+          value={style.transparent ? "" : style.bg}
+          onChange={(v) => {
+            setStyle((s) => ({ ...s, transparent: !v, bg: v || s.bg }));
+            setPreset("custom");
+          }}
+          clearable
         />
-        {!style.transparent ? (
-          <ColorField
-            id="te-bg"
-            label="background colour"
-            value={style.bg}
-            onChange={(v) => set("bg", v)}
-          />
-        ) : null}
         <Checkbox
           label="Italic"
           checked={style.italic}
