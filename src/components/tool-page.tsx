@@ -2,16 +2,14 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { CATEGORIES, getTool } from "@/lib/tools";
 import { JsonLd, toolJsonLd } from "@/lib/seo";
-import { CarryProvider, ToolStrip } from "@/components/tool-strip";
 
 /** Shared chrome for every tool route: breadcrumb, heading, JSON-LD, siblings. */
 export function ToolPage({ slug, children }: { slug: string; children: React.ReactNode }) {
   const tool = getTool(slug);
 
   return (
-    <CarryProvider>
+    <>
       <JsonLd data={toolJsonLd(slug)} />
-      <ToolStrip current={slug} />
       <nav aria-label="Breadcrumb" className="mb-3">
         <ol className="flex items-center gap-1 text-label text-muted-foreground tracking-wider uppercase">
           <li>
@@ -36,6 +34,6 @@ export function ToolPage({ slug, children }: { slug: string; children: React.Rea
       </div>
 
       {children}
-    </CarryProvider>
+    </>
   );
 }

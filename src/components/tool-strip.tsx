@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { TOOL_ICONS } from "@/components/tool-icons";
 import { setHandoff } from "@/lib/history";
 import { CATEGORIES, TOOLS, type ToolCategory } from "@/lib/tools";
@@ -45,9 +45,11 @@ export function usePublishCarry(carry: Carry | null) {
  * file loaded, clicking another tool opens it with that file already in
  * place, the way ezgif chains edits; without one it is plain navigation.
  */
-export function ToolStrip({ current }: { current: string }) {
+export function ToolStrip() {
   const router = useRouter();
   const carry = React.useContext(CarryValue);
+  const current = usePathname().split("/")[1];
+  if (!TOOLS.some((t) => t.slug === current)) return null;
   const go = async (e: React.MouseEvent, href: string) => {
     if (!carry || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
     e.preventDefault();
@@ -56,10 +58,7 @@ export function ToolStrip({ current }: { current: string }) {
   };
 
   return (
-    <nav
-      aria-label="Switch tool"
-      className="-mx-4 sm:-mx-6 -mt-6 mb-5 border-b border-border bg-card px-3 py-1.5 sm:px-5"
-    >
+    <nav aria-label="Switch tool" className="border-b border-border bg-card px-3 py-1.5 sm:px-5">
       <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
         {carry ? (
           <span
