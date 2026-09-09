@@ -10,7 +10,7 @@
     "dev": "next dev -p 3000",
     "build": "next build && node scripts/gen-agent-files.mjs",
     "start": "serve out -p 3000",
-    "deploy": "pnpm build && pnpm dlx wrangler pages deploy out --project-name=gif-tools",
+    "deploy": "pnpm build && pnpm dlx --allow-build=esbuild --allow-build=workerd wrangler pages deploy out --project-name=gif-tools",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "playwright test",
