@@ -1,8 +1,7 @@
 "use client";
 import * as React from "react";
 import { zipSync } from "fflate";
-import { Button } from "@/components/ui/button";
-import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
+import { ToolShell, useAutoRun, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { frameNames, withFFmpeg } from "@/lib/engines/ffmpeg";
 import { getTool } from "@/lib/tools";
 
@@ -81,12 +80,9 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       });
     });
 
+  useAutoRun(go, [file], !!file);
   return (
     <>
-      <Button onClick={go} disabled={!file}>
-        Split into frames
-      </Button>
-
       {/* Only the summary is live; 500 thumbnails inside the region would be
           read out one by one. The count is the announcement. */}
       <div role="status" aria-live="polite">

@@ -1,8 +1,7 @@
 "use client";
 import * as React from "react";
-import { Button } from "@/components/ui/button";
 import { Checkbox, Label, Range, Readout, Select } from "@/components/ui/field";
-import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
+import { ToolShell, useAutoRun, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { ffmpegOnce, paletteGifArgs } from "@/lib/engines/ffmpeg";
 import { useFirstFrame } from "@/lib/preview";
 import { getTool } from "@/lib/tools";
@@ -113,6 +112,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       });
     });
 
+  useAutoRun(go, [file, target, quality, colors, animate], !!file);
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -166,10 +166,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       )}
 
       <Readout rows={readout} />
-
-      <Button onClick={go} disabled={!file}>
-        Convert to {target.toUpperCase()}
-      </Button>
     </>
   );
 }

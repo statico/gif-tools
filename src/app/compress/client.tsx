@@ -1,8 +1,7 @@
 "use client";
 import * as React from "react";
-import { Button } from "@/components/ui/button";
 import { Checkbox, Label, Range, Readout, Select } from "@/components/ui/field";
-import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
+import { ToolShell, useAutoRun, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { compressImage, MagickFormat } from "@/lib/engines/magick";
 import { useFirstFrame } from "@/lib/preview";
 import { getTool } from "@/lib/tools";
@@ -62,6 +61,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       });
     });
 
+  useAutoRun(go, [file, key, quality, strip], !!file);
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -114,10 +114,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       >
         {saving?.text ?? ""}
       </p>
-
-      <Button onClick={go} disabled={!file}>
-        Compress image
-      </Button>
     </>
   );
 }

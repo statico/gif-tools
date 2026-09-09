@@ -2,7 +2,7 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox, ColorField, Input, Label, Range, Select } from "@/components/ui/field";
-import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
+import { ToolShell, useAutoRun, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { encodeGif, renderFrames } from "@/lib/engines/gif-encode";
 import { getTool } from "@/lib/tools";
 import { inkMetrics } from "@/lib/utils";
@@ -350,6 +350,7 @@ function Body({
     setPreset("custom");
   };
 
+  useAutoRun(go, [text, format, style, lineMode, size, anim]);
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -532,8 +533,6 @@ function Body({
           </div>
         </div>
       </div>
-
-      <Button onClick={go}>Generate {format === "gif" ? "GIF" : "PNG"}</Button>
     </>
   );
 }

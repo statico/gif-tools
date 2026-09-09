@@ -1,8 +1,7 @@
 "use client";
 import * as React from "react";
-import { Button } from "@/components/ui/button";
 import { Checkbox, Input, Label, Range, Select } from "@/components/ui/field";
-import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
+import { ToolShell, useAutoRun, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { ffmpegOnce, paletteGifArgs, probe } from "@/lib/engines/ffmpeg";
 import { getTool } from "@/lib/tools";
 
@@ -139,6 +138,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
     }.`;
   }
 
+  useAutoRun(go, [file, mode, multiplier, fps, drop, dropFps], !!file);
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -223,10 +223,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
         <p className="text-ui text-foreground tabular-nums">{headline}</p>
         <p className="text-label text-muted-foreground tabular-nums">{detail}</p>
       </div>
-
-      <Button onClick={go} disabled={!file}>
-        Change speed
-      </Button>
     </>
   );
 }

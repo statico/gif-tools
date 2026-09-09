@@ -1,8 +1,7 @@
 "use client";
 import * as React from "react";
-import { Button } from "@/components/ui/button";
 import { Label, Range, Readout, Select } from "@/components/ui/field";
-import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
+import { ToolShell, useAutoRun, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { ffmpegOnce } from "@/lib/engines/ffmpeg";
 import { useFirstFrame } from "@/lib/preview";
 import { getTool } from "@/lib/tools";
@@ -91,6 +90,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       publish({ data: out, ext: format, note: `${format} crf=${crf}` });
     });
 
+  useAutoRun(go, [file, format, crf], !!file);
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -148,10 +148,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
           {saving.text}
         </p>
       ) : null}
-
-      <Button onClick={go} disabled={!file}>
-        Convert to {format.toUpperCase()}
-      </Button>
     </>
   );
 }

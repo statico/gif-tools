@@ -91,7 +91,7 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-display: var(--font-vcr), "VCR OSD Mono", ui-monospace, monospace;
 
-  --text-label: 11px;
+  --text-label: 12px;
   --text-ui: 13px;
   --text-heading: 22px;
   --text-stat: 26px;
