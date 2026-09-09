@@ -89,6 +89,7 @@
 @theme inline {
   --font-sans: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-display: var(--font-vcr), "VCR OSD Mono", ui-monospace, monospace;
 
   --text-label: 11px;
   --text-ui: 13px;
@@ -164,6 +165,22 @@
   }
   .card-glow:hover {
     border-color: hsl(var(--smui-border-hover));
+  }
+  /* Home grid card. --tone is the category's HSL triplet, set inline. */
+  .tool-card {
+    border-left: 3px solid hsl(var(--tone) / 0.7);
+    transition:
+      border-color 0.15s,
+      background-color 0.15s;
+  }
+  .tool-card:hover,
+  .tool-card:focus-visible {
+    border-color: hsl(var(--smui-border-hover));
+    border-left-color: hsl(var(--tone));
+    background-color: hsl(var(--tone) / 0.06);
+  }
+  .tool-card svg {
+    color: hsl(var(--tone));
   }
   .smui-label {
     font-size: var(--text-label);

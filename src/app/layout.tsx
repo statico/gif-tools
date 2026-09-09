@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { ThemeProvider } from "@/components/theme";
 import { SiteFooter, SiteNav } from "@/components/site-nav";
 import { SITE } from "@/lib/site";
@@ -11,6 +12,9 @@ const mono = JetBrains_Mono({
   variable: "--font-jetbrains",
   display: "swap",
 });
+
+// Headings only. Freeware by Riciery Leal; same file the social card uses.
+const vcr = localFont({ src: "./vcr-osd-mono.ttf", variable: "--font-vcr", display: "swap" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -41,7 +45,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={mono.variable}>
+    <html lang="en" suppressHydrationWarning className={`${mono.variable} ${vcr.variable}`}>
       <body>
         <ThemeProvider>
           <a

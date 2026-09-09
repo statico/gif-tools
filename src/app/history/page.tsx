@@ -18,7 +18,7 @@ export default function Page() {
   return (
     <>
       <JsonLd data={pageJsonLd("history", "Your history", metadata.description as string)} />
-      <h1 className="text-heading text-foreground tracking-tight mb-1.5">Your history</h1>
+      <h1 className="font-display text-heading text-foreground mb-1.5">Your history</h1>
       <p className="text-sm text-muted-foreground max-w-3xl mb-5">
         The last 60 things you made, stored in this browser and nowhere else. Clearing your site
         data clears this list, and it does not follow you to other devices.
