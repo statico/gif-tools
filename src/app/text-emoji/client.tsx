@@ -217,16 +217,16 @@ function draw(ctx: CanvasRenderingContext2D, S: number, o: Opts, t: number) {
   ctx.translate(-S / 2, -S / 2);
 
   // Top-to-bottom gradient across the whole block when the two colours differ.
-  const grad = (a: string, b: string) => {
+  // Gradient coordinates are read in the transform current at paint time, so
+  // each line builds its own, shifted by its baseline `y`.
+  const grad = (a: string, b: string, y: number) => {
     if (!b || a === b) return a;
-    const g = ctx.createLinearGradient(0, margin, 0, margin + inner);
+    const g = ctx.createLinearGradient(0, margin - y, 0, margin + inner - y);
     g.addColorStop(0, a);
     g.addColorStop(1, b);
     return g;
   };
-  const paint =
-    o.anim === "rainbow" ? `hsl(${Math.round(t * 360)} 92% 58%)` : grad(o.fill, o.fill2);
-  const strokePaint = grad(o.stroke || "#000000", o.stroke2);
+  const rainbow = o.anim === "rainbow" ? `hsl(${Math.round(t * 360)} 92% 58%)` : null;
 
   for (const l of laid) {
     y += l.asc;
@@ -235,8 +235,10 @@ function draw(ctx: CanvasRenderingContext2D, S: number, o: Opts, t: number) {
     // Cap the stretch so a one- or two-letter line doesn't smear.
     ctx.scale(Math.min(1.5, inner / l.w), 1);
     ctx.font = font(l.fs);
+    const paint = rainbow ?? grad(o.fill, o.fill2, y);
+    const strokePaint = grad(o.stroke || "#000000", o.stroke2, y);
     if (o.glow) {
-      ctx.shadowColor = o.anim === "rainbow" ? (paint as string) : o.fill;
+      ctx.shadowColor = rainbow ?? o.fill;
       ctx.shadowBlur = l.fs * 0.25;
     } else if (o.shadow) {
       ctx.shadowColor = "rgba(0,0,0,0.35)";
