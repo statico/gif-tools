@@ -1,56 +1,11 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import {
-  ArrowLeftRight,
-  Clapperboard,
-  Crop,
-  Film,
-  Gauge,
-  Grid2x2,
-  Hash,
-  ImageDown,
-  Images,
-  type LucideIcon,
-  MessageSquareText,
-  PartyPopper,
-  Rewind,
-  RotateCw,
-  Scaling,
-  Scissors,
-  Shrink,
-  Smile,
-  Type,
-  Vibrate,
-  WandSparkles,
-} from "lucide-react";
+import { TOOL_ICONS } from "@/components/tool-icons";
 import { CATEGORIES, TOOLS, type ToolCategory } from "@/lib/tools";
 import { JsonLd } from "@/lib/seo";
 import { SITE } from "@/lib/site";
 
 const ORDER: ToolCategory[] = ["convert", "edit", "optimize", "emoji"];
-
-const ICONS: Record<string, LucideIcon> = {
-  "video-to-gif": Film,
-  "gif-to-video": Clapperboard,
-  "gif-maker": Images,
-  convert: ArrowLeftRight,
-  split: Grid2x2,
-  resize: Scaling,
-  crop: Crop,
-  cut: Scissors,
-  speed: Gauge,
-  reverse: Rewind,
-  rotate: RotateCw,
-  "add-text": Type,
-  effects: WandSparkles,
-  optimize: Shrink,
-  compress: ImageDown,
-  intensify: Vibrate,
-  party: PartyPopper,
-  emojify: Smile,
-  number: Hash,
-  "text-emoji": MessageSquareText,
-};
 
 export default function Home() {
   return (
@@ -97,7 +52,7 @@ export default function Home() {
             <p className="text-ui text-muted-foreground mb-3">{CATEGORIES[cat].description}</p>
             <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
               {TOOLS.filter((t) => t.category === cat).map((t) => {
-                const Icon = ICONS[t.slug];
+                const Icon = TOOL_ICONS[t.slug];
                 return (
                   <li key={t.slug}>
                     <Link

@@ -2,6 +2,7 @@
 import * as React from "react";
 import { ChevronLeft, ChevronRight, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { HistoryPicker } from "@/components/history-picker";
 import { ColorField, Input, Label, Select } from "@/components/ui/field";
 import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { encodeGif, loadImage, renderFrames } from "@/lib/engines/gif-encode";
@@ -90,7 +91,7 @@ async function filesFromDrop(dt: DataTransfer): Promise<File[]> {
   return out;
 }
 
-function Body({ setBusy, setProgress, setError, publish }: ToolBodyProps) {
+function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) {
   const run = useRun({ setBusy, setError, setProgress });
   const [frames, setFrames] = React.useState<Frame[]>([]);
   const [delay, setDelay] = React.useState(120);
@@ -145,6 +146,21 @@ function Body({ setBusy, setProgress, setError, publish }: ToolBodyProps) {
       return next;
     });
   const move = (i: number, dir: -1 | 1) => reorder(i, i + dir);
+
+  // A file handed over from another tool (or pasted) arrives via the shell.
+  React.useEffect(() => {
+    if (file) void addFiles([file]);
+  }, [file, addFiles]);
+  React.useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const files = Array.from(e.clipboardData?.files ?? []).filter((f) =>
+        f.type.startsWith("image/"),
+      );
+      if (files.length) void addFiles(files);
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [addFiles]);
 
   // Loop the assembled animation at the real frame delay, so reordering a
   // frame or changing the fit shows up immediately rather than after an encode.
@@ -238,11 +254,15 @@ function Body({ setBusy, setProgress, setError, publish }: ToolBodyProps) {
         <Upload className="mx-auto mb-2 size-5 text-muted-foreground" aria-hidden="true" />
         <p className="text-ui text-foreground mb-1">Drop several images, or a folder, here</p>
         <p className="text-label text-muted-foreground mb-3">
-          they become frames in the order you add them — nothing leaves your device
+          they become frames in the order you add them — paste works too — nothing leaves your
+          device
         </p>
-        <Button variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
-          Choose images
-        </Button>
+        <div className="flex flex-wrap justify-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
+            Choose images
+          </Button>
+          <HistoryPicker label="Add from history" onPick={(f) => void addFiles([f])} />
+        </div>
       </div>
 
       <div>
