@@ -190,6 +190,22 @@ export const TOOLS: Tool[] = [
     keywords: ["gif effects", "gif filter", "grayscale gif"],
   },
   {
+    slug: "remove-bg",
+    name: "Remove Background",
+    title: "Remove a background colour from a GIF or image",
+    description:
+      "Make one colour transparent in an animated GIF or still image. Click the preview to pick the colour, then set tolerance and feathering for soft edges. Runs locally with ffmpeg.",
+    blurb: "Key out one colour with tolerance and feathered edges.",
+    category: "edit",
+    engine: ["ffmpeg", "canvas"],
+    keywords: [
+      "remove gif background",
+      "transparent gif",
+      "chroma key gif",
+      "remove white background",
+    ],
+  },
+  {
     slug: "optimize",
     name: "Optimize",
     title: "GIF optimizer and compressor",
