@@ -71,8 +71,18 @@ export function Range({
           <Label htmlFor={inputId} className="mb-0">
             {label}
           </Label>
-          <span className="text-label text-foreground tabular-nums" aria-hidden="true">
-            {value}
+          {/* The readout is a number box: a slider can't land on 2 of 256. */}
+          <span className="flex items-baseline gap-1 text-label text-foreground tabular-nums">
+            <input
+              type="number"
+              aria-label={`${label} value`}
+              value={value}
+              min={p.min}
+              max={p.max}
+              step={p.step}
+              onChange={p.onChange}
+              className="w-14 border border-input bg-background px-1 py-0.5 text-right text-label text-foreground tabular-nums"
+            />
             {suffix}
           </span>
         </div>
@@ -81,7 +91,6 @@ export function Range({
         id={inputId}
         type="range"
         value={value}
-        // The numeric readout is aria-hidden above; give AT the same info here.
         aria-valuetext={suffix ? `${value}${suffix}` : undefined}
         className={cn("w-full accent-primary h-9", className)}
         {...p}
