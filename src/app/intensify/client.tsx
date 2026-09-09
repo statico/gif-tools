@@ -54,12 +54,10 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   const [intensity, setIntensity] = React.useState(8);
   const [axes, setAxes] = React.useState<Axes>("both");
   const [edge, setEdge] = React.useState<Edge>("crop");
-  const [bgMode, setBgMode] = React.useState<"transparent" | "color">("transparent");
-  const [color, setColor] = React.useState("#ffffff");
+  const [bg, setBg] = React.useState(""); // "" = transparent
   const [img, setImg] = React.useState<HTMLImageElement | null>(null);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
 
-  const safeColor = /^#[0-9a-fA-F]{6}$/.test(color) ? color : "#ffffff";
   const settings: Settings = {
     size,
     frames,
@@ -67,7 +65,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
     intensity,
     axes,
     edge,
-    bg: bgMode === "color" ? safeColor : null,
+    bg: bg || null,
   };
 
   React.useEffect(() => {
@@ -110,7 +108,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [img, size, frames, delay, intensity, axes, edge, bgMode, color]);
+  }, [img, size, frames, delay, intensity, axes, edge, bg]);
 
   const go = () =>
     run("Shaking", async () => {
@@ -122,7 +120,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       );
       setProgress(0.8);
       publish({
-        data: encodeGif(data, { delayMs: delay, transparent: bgMode === "transparent" }),
+        data: encodeGif(data, { delayMs: delay, transparent: !bg }),
         ext: "gif",
         note: `${size}px · ${frames}f · ${delay}ms · ${intensity}% shake`,
       });
@@ -189,28 +187,14 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
             <option value="pad">Pad — let the background show</option>
           </Select>
         </div>
-        <div>
-          <Label htmlFor="int-bg">background</Label>
-          <Select
-            id="int-bg"
-            value={bgMode}
-            onChange={(e) => setBgMode(e.target.value as "transparent" | "color")}
-          >
-            <option value="transparent">Transparent</option>
-            <option value="color">Solid colour</option>
-          </Select>
-        </div>
+        <ColorField id="int-bg" label="background colour" value={bg} onChange={setBg} clearable />
       </div>
-
-      {bgMode === "color" ? (
-        <ColorField id="int-color" label="colour" value={color} onChange={setColor} />
-      ) : null}
 
       <div>
         <Label>preview</Label>
         <div
           className={`flex items-center justify-center border border-border p-4 ${
-            bgMode === "transparent" ? "checkerboard" : ""
+            bg ? "" : "checkerboard"
           }`}
         >
           {img ? (

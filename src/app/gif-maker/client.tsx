@@ -49,7 +49,7 @@ function drawFrame(
   bg: string,
 ) {
   ctx.clearRect(0, 0, w, h);
-  if (fit === "contain") {
+  if (fit === "contain" && bg) {
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, w, h);
   }
@@ -192,7 +192,7 @@ function Body({ setBusy, setProgress, setError, publish }: ToolBodyProps) {
       const data = encodeGif(imageData, {
         delayMs: ms,
         loop: clamp(Math.round(loop), 0, 65535),
-        transparent: false,
+        transparent: !bg,
       });
       setProgress(1);
       publish({
@@ -393,7 +393,7 @@ function Body({ setBusy, setProgress, setError, publish }: ToolBodyProps) {
       </div>
 
       {fit === "contain" ? (
-        <ColorField id="gm-bg" label="background colour" value={bg} onChange={setBg} />
+        <ColorField id="gm-bg" label="letterbox colour" value={bg} onChange={setBg} clearable />
       ) : null}
 
       <div>

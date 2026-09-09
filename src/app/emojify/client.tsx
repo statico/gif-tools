@@ -222,13 +222,11 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   const [amount, setAmount] = React.useState(BY_ID.spin.amount.def);
   const [cw, setCw] = React.useState(true);
   const [edge, setEdge] = React.useState<Settings["edge"]>("left");
-  const [bgMode, setBgMode] = React.useState<"transparent" | "color">("transparent");
-  const [bg, setBg] = React.useState("#ffffff");
+  const [bg, setBg] = React.useState(""); // "" = transparent
   const [img, setImg] = React.useState<HTMLImageElement | null>(null);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
 
   const def = BY_ID[effect];
-  const safeBg = /^#[0-9a-fA-F]{6}$/.test(bg) ? bg : "#ffffff";
   const settings: Settings = {
     effect,
     size,
@@ -237,7 +235,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
     amount,
     cw,
     edge,
-    bg: bgMode === "color" ? safeBg : null,
+    bg: bg || null,
   };
 
   // Each effect has a look that only works at its own tempo, so switching
@@ -288,7 +286,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [img, effect, size, frames, delay, amount, cw, edge, bgMode, safeBg]);
+  }, [img, effect, size, frames, delay, amount, cw, edge, bg]);
 
   const go = () =>
     run("Animating", async () => {
@@ -300,7 +298,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       );
       setProgress(0.8);
       publish({
-        data: encodeGif(data, { delayMs: delay, transparent: bgMode === "transparent" }),
+        data: encodeGif(data, { delayMs: delay, transparent: !bg }),
         ext: "gif",
         note: `${def.name} · ${size}px · ${frames}f · ${delay}ms`,
       });
@@ -336,7 +334,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
         <Label>preview</Label>
         <div
           className={`flex items-center justify-center border border-border p-4 ${
-            bgMode === "transparent" ? "checkerboard" : ""
+            bg ? "" : "checkerboard"
           }`}
         >
           {img ? (
@@ -427,22 +425,8 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
             <option value={256}>256 × 256</option>
           </Select>
         </div>
-        <div>
-          <Label htmlFor="emo-bg">background</Label>
-          <Select
-            id="emo-bg"
-            value={bgMode}
-            onChange={(e) => setBgMode(e.target.value as "transparent" | "color")}
-          >
-            <option value="transparent">Transparent</option>
-            <option value="color">Solid colour</option>
-          </Select>
-        </div>
+        <ColorField id="emo-bg" label="background colour" value={bg} onChange={setBg} clearable />
       </div>
-
-      {bgMode === "color" ? (
-        <ColorField id="emo-bg-color" label="colour" value={bg} onChange={setBg} />
-      ) : null}
 
       <Button onClick={go} disabled={!file}>
         Make the emoji

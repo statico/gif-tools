@@ -113,8 +113,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   const [threshold, setThreshold] = React.useState(45);
   const [from, setFrom] = React.useState("#ff2d95");
   const [to, setTo] = React.useState("#00e5ff");
-  const [bgMode, setBgMode] = React.useState<"transparent" | "color">("transparent");
-  const [bg, setBg] = React.useState("#ffffff");
+  const [bg, setBg] = React.useState(""); // "" = transparent
   const [img, setImg] = React.useState<HTMLImageElement | null>(null);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
 
@@ -127,7 +126,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
     threshold,
     from,
     to,
-    bg: bgMode === "color" ? bg : null,
+    bg: bg || null,
   };
 
   React.useEffect(() => {
@@ -168,7 +167,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [img, size, frames, delay, palette, mode, threshold, from, to, bgMode, bg]);
+  }, [img, size, frames, delay, palette, mode, threshold, from, to, bg]);
 
   const go = () =>
     run("Partying", async () => {
@@ -180,7 +179,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       );
       setProgress(0.8);
       publish({
-        data: encodeGif(data, { delayMs: delay, transparent: bgMode === "transparent" }),
+        data: encodeGif(data, { delayMs: delay, transparent: !bg }),
         ext: "gif",
         note: `${size}px · ${frames}f · ${delay}ms · ${palette} · ${mode}`,
       });
@@ -262,28 +261,13 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <Label htmlFor="party-bg">background</Label>
-          <Select
-            id="party-bg"
-            value={bgMode}
-            onChange={(e) => setBgMode(e.target.value as "transparent" | "color")}
-          >
-            <option value="transparent">Transparent</option>
-            <option value="color">Solid colour</option>
-          </Select>
-        </div>
-        {bgMode === "color" ? (
-          <ColorField id="party-bg-color" label="colour" value={bg} onChange={setBg} />
-        ) : null}
-      </div>
+      <ColorField id="party-bg" label="background colour" value={bg} onChange={setBg} clearable />
 
       <div>
         <Label>preview</Label>
         <div
           className={`flex items-center justify-center border border-border p-4 ${
-            bgMode === "transparent" ? "checkerboard" : ""
+            bg ? "" : "checkerboard"
           }`}
         >
           {img ? (
