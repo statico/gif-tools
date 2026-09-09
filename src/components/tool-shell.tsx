@@ -237,7 +237,7 @@ export function ToolShell({
                       ext={file.name.split(".").pop() ?? ""}
                       bytes={file.size}
                       gif={sourceGif}
-                      className="mx-auto mb-3 w-fit text-left"
+                      className="mx-auto mb-3 w-fit justify-items-center text-left"
                     />
                   ) : (
                     <p className="text-label text-muted-foreground mb-3">
@@ -336,16 +336,16 @@ export function ToolShell({
                       : "Nothing yet."}
                 </p>
               )}
-              {result ? (
-                <Facts
-                  size={resultSize}
-                  ext={result.ext}
-                  bytes={result.data.length}
-                  gif={resultGif}
-                  note={result.note}
-                />
-              ) : null}
             </div>
+            {result ? (
+              <Facts
+                size={resultSize}
+                ext={result.ext}
+                bytes={result.data.length}
+                gif={resultGif}
+                note={result.note}
+              />
+            ) : null}
 
             {error ? (
               <div
@@ -459,7 +459,7 @@ function useGifInfo(src: Blob | Uint8Array | null) {
   return info;
 }
 
-/** Compact label/value table for a file: dimensions, format, size, frames. */
+/** Spec readout for a file: big values in the display face over small labels. */
 function Facts({
   size,
   ext,
@@ -475,23 +475,31 @@ function Facts({
   note?: string;
   className?: string;
 }) {
-  const rows: [string, React.ReactNode][] = [];
-  if (size) rows.push(["dimensions", `${size.w} × ${size.h}`]);
-  rows.push(["format", ext.toUpperCase()], ["file size", formatBytes(bytes)]);
+  const cells: [string, React.ReactNode][] = [];
+  if (size) cells.push(["dimensions", `${size.w} × ${size.h}`]);
+  cells.push(["format", ext.toUpperCase()], ["file size", formatBytes(bytes)]);
   if (gif && gif.frames > 1) {
-    rows.push(["frames", gif.frames]);
-    rows.push(["duration", `${(gif.duration / 1000).toFixed(1)} s`]);
+    cells.push(["frames", gif.frames]);
+    cells.push(["duration", `${(gif.duration / 1000).toFixed(1)} s`]);
   }
-  if (note) rows.push(["settings", note]);
   return (
-    <dl className={cn("grid grid-cols-[max-content_auto] gap-x-3 gap-y-0.5 text-label", className)}>
-      {rows.map(([k, v]) => (
-        <React.Fragment key={k}>
-          <dt className="text-muted-foreground">{k}</dt>
-          <dd className="text-foreground tabular-nums">{v}</dd>
-        </React.Fragment>
-      ))}
-    </dl>
+    <div className={cn("grid gap-2", className)}>
+      <dl className="flex flex-wrap gap-x-5 gap-y-2">
+        {cells.map(([k, v]) => (
+          <div key={k} className="min-w-0">
+            <dd className="font-display text-[15px] leading-tight text-foreground tabular-nums">
+              {v}
+            </dd>
+            <dt className="text-label text-muted-foreground">{k}</dt>
+          </div>
+        ))}
+      </dl>
+      {note ? (
+        <p className="border-t border-border pt-2 text-label text-muted-foreground tabular-nums">
+          {note}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
