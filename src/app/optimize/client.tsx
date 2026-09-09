@@ -85,7 +85,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
           label="colors"
           min={2}
           max={256}
-          step={2}
+          step={1}
           value={colors}
           onChange={(e) => setColors(Number(e.target.value))}
         />
