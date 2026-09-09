@@ -1,8 +1,7 @@
 "use client";
 import * as React from "react";
-import { Button } from "@/components/ui/button";
 import { Checkbox, ColorField, Input, Label, Select } from "@/components/ui/field";
-import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
+import { ToolShell, useAutoRun, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { ffmpegOnce, paletteGifArgs } from "@/lib/engines/ffmpeg";
 import { getTool } from "@/lib/tools";
 import { NO_PREVIEW, useFirstFrame } from "@/lib/preview";
@@ -126,6 +125,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       publish({ data: out, ext, note: filters });
     });
 
+  useAutoRun(go, [file, turn, angle, bg, hflip, vflip], !!file);
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -207,10 +207,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
           </p>
         ) : null}
       </div>
-
-      <Button onClick={go} disabled={!file}>
-        Rotate
-      </Button>
     </>
   );
 }

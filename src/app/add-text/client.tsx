@@ -1,8 +1,7 @@
 "use client";
 import * as React from "react";
-import { Button } from "@/components/ui/button";
 import { ColorField, Input, Label, Range, Select } from "@/components/ui/field";
-import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
+import { ToolShell, useAutoRun, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { frameNames, probe, withFFmpeg } from "@/lib/engines/ffmpeg";
 import { encodeGif, loadImage } from "@/lib/engines/gif-encode";
 import { getTool } from "@/lib/tools";
@@ -221,6 +220,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       });
     });
 
+  useAutoRun(go, [frames, frameDelay, style], frames.length > 0 && !reading);
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -311,10 +311,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
           That file has more than {MAX_FRAMES} frames; only the first {MAX_FRAMES} are captioned.
         </p>
       ) : null}
-
-      <Button onClick={go} disabled={!frames.length || reading}>
-        {reading ? "Reading frames…" : "Add text"}
-      </Button>
     </>
   );
 }

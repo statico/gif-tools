@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { AlertTriangle, Download, Loader2, RotateCcw, Upload } from "lucide-react";
+import { AlertTriangle, Download, Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/field";
@@ -8,7 +8,7 @@ import { HistoryPicker } from "@/components/history-picker";
 import { usePublishCarry, type Carry } from "@/components/tool-strip";
 import { download, mimeFor } from "@/lib/download";
 import { addToHistory, takeHandoff } from "@/lib/history";
-import { formatBytes, slugify } from "@/lib/utils";
+import { cn, formatBytes, gifInfo, slugify, type GifInfo } from "@/lib/utils";
 import type { Tool } from "@/lib/tools";
 
 export interface ToolResult {
@@ -73,6 +73,13 @@ export function ToolShell({
   const [name, setName] = React.useState(defaultName ?? tool.slug);
   const [nameEdited, setNameEdited] = React.useState(false);
   const [dragging, setDragging] = React.useState(false);
+  // Most runs finish in well under a second; only show the spinner past that.
+  const [slow, setSlow] = React.useState(false);
+  React.useEffect(() => {
+    if (!busy) return setSlow(false);
+    const t = setTimeout(() => setSlow(true), 1000);
+    return () => clearTimeout(t);
+  }, [busy]);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   // Object URLs are revoked whenever they're replaced, so long sessions with
@@ -102,23 +109,15 @@ export function ToolShell({
     if (!b) setProgress(0);
   }, []);
 
-  const publish = React.useCallback(
-    (r: ToolResult) => {
-      const mime = r.mime ?? mimeFor(`x.${r.ext}`);
-      const blob = new Blob([r.data.slice().buffer as ArrayBuffer], { type: mime });
-      setResult(r);
-      setPreviewUrl((old) => {
-        if (old) URL.revokeObjectURL(old);
-        return URL.createObjectURL(blob);
-      });
-      const filename = `${slugify(name, tool.slug)}.${r.ext}`;
-      void addToHistory(
-        { tool: tool.slug, toolName: tool.name, filename, mime, note: r.note },
-        blob,
-      );
-    },
-    [name, tool.slug, tool.name],
-  );
+  const publish = React.useCallback((r: ToolResult) => {
+    const mime = r.mime ?? mimeFor(`x.${r.ext}`);
+    const blob = new Blob([r.data.slice().buffer as ArrayBuffer], { type: mime });
+    setResult(r);
+    setPreviewUrl((old) => {
+      if (old) URL.revokeObjectURL(old);
+      return URL.createObjectURL(blob);
+    });
+  }, []);
 
   const onPick = React.useCallback(
     (f: File | null) => {
@@ -188,6 +187,8 @@ export function ToolShell({
   usePublishCarry(carry);
   const sourceSize = useMediaSize(sourceUrl, file?.type ?? null);
   const resultSize = useMediaSize(previewUrl, resultMime);
+  const sourceGif = useGifInfo(file);
+  const resultGif = useGifInfo(result?.data ?? null);
 
   return (
     <>
@@ -230,11 +231,19 @@ export function ToolShell({
                   <p className="text-ui text-foreground mb-1">
                     {file ? file.name : "Drop a file here"}
                   </p>
-                  <p className="text-label text-muted-foreground mb-3 tabular-nums">
-                    {file
-                      ? stats(sourceSize, file.name.split(".").pop() ?? "", file.size)
-                      : "or choose one, paste one, or pick from history — nothing leaves your device"}
-                  </p>
+                  {file ? (
+                    <Facts
+                      size={sourceSize}
+                      ext={file.name.split(".").pop() ?? ""}
+                      bytes={file.size}
+                      gif={sourceGif}
+                      className="mx-auto mb-3 w-fit text-left"
+                    />
+                  ) : (
+                    <p className="text-label text-muted-foreground mb-3">
+                      or choose one, paste one, or pick from history — nothing leaves your device
+                    </p>
+                  )}
                   <div className="flex flex-wrap justify-center gap-2">
                     <Button variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
                       {file ? "Choose another" : "Choose file"}
@@ -290,20 +299,23 @@ export function ToolShell({
               role="status"
               aria-live="polite"
               aria-busy={busy}
-              className="min-h-40 flex flex-col items-center justify-center gap-2 border border-border bg-smui-surface-0 p-3"
+              className="relative min-h-40 flex flex-col items-center justify-center gap-2 border border-border bg-smui-surface-0 p-3"
             >
-              {busy ? (
-                <div className="text-center">
-                  <Loader2
-                    className="mx-auto mb-2 size-5 animate-spin text-primary"
-                    aria-hidden="true"
-                  />
-                  <p className="text-ui text-foreground">{busyMessage ?? "Processing"}</p>
-                  <p className="text-label text-muted-foreground tabular-nums">
-                    {Math.round(progress * 100)}%
-                  </p>
+              {slow ? (
+                <div className="absolute inset-0 z-10 grid place-items-center bg-smui-surface-0/80 text-center">
+                  <div>
+                    <Loader2
+                      className="mx-auto mb-2 size-5 animate-spin text-primary"
+                      aria-hidden="true"
+                    />
+                    <p className="text-ui text-foreground">{busyMessage ?? "Processing"}</p>
+                    <p className="text-label text-muted-foreground tabular-nums">
+                      {Math.round(progress * 100)}%
+                    </p>
+                  </div>
                 </div>
-              ) : previewUrl && resultMime?.startsWith("video/") ? (
+              ) : null}
+              {previewUrl && resultMime?.startsWith("video/") ? (
                 <video src={previewUrl} controls loop className="max-h-72 max-w-full" />
               ) : previewUrl && resultMime?.startsWith("image/") ? (
                 <img
@@ -317,14 +329,21 @@ export function ToolShell({
                 </p>
               ) : (
                 <p className="text-ui text-muted-foreground text-center">
-                  Nothing yet. {requiresFile ? "Pick a file and run the tool." : "Run the tool."}
+                  {busy
+                    ? (busyMessage ?? "Processing")
+                    : requiresFile
+                      ? "Pick a file to start."
+                      : "Nothing yet."}
                 </p>
               )}
-              {result && !busy ? (
-                <p className="text-label text-muted-foreground tabular-nums text-center">
-                  {stats(resultSize, result.ext, result.data.length)}
-                  {result.note ? ` · ${result.note}` : ""}
-                </p>
+              {result ? (
+                <Facts
+                  size={resultSize}
+                  ext={result.ext}
+                  bytes={result.data.length}
+                  gif={resultGif}
+                  note={result.note}
+                />
               ) : null}
             </div>
 
@@ -371,34 +390,20 @@ export function ToolShell({
               <Button
                 className="flex-1"
                 disabled={!result}
-                onClick={() =>
-                  result &&
-                  download(
-                    result.data,
-                    `${slugify(name, tool.slug)}.${result.ext}`,
-                    resultMime ?? undefined,
-                  )
-                }
+                onClick={() => {
+                  if (!result) return;
+                  const filename = `${slugify(name, tool.slug)}.${result.ext}`;
+                  download(result.data, filename, resultMime ?? undefined);
+                  const mime = resultMime ?? "application/octet-stream";
+                  void addToHistory(
+                    { tool: tool.slug, toolName: tool.name, filename, mime, note: result.note },
+                    new Blob([result.data.slice().buffer as ArrayBuffer], { type: mime }),
+                  );
+                }}
               >
                 <Download aria-hidden="true" />
                 Download{result ? ` · ${formatBytes(result.data.length)}` : ""}
               </Button>
-              {result ? (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  aria-label="Clear result"
-                  onClick={() => {
-                    setResult(null);
-                    setPreviewUrl((old) => {
-                      if (old) URL.revokeObjectURL(old);
-                      return null;
-                    });
-                  }}
-                >
-                  <RotateCcw aria-hidden="true" />
-                </Button>
-              ) : null}
             </div>
           </CardContent>
         </Card>
@@ -436,10 +441,58 @@ function useMediaSize(url: string | null, mime: string | null) {
 }
 
 /** "128 × 128 · GIF · 25.2 KB", skipping the parts that aren't known yet. */
-function stats(size: { w: number; h: number } | null, ext: string, bytes: number) {
-  return [size && `${size.w} × ${size.h}`, ext.toUpperCase(), formatBytes(bytes)]
-    .filter(Boolean)
-    .join(" · ");
+function useGifInfo(src: Blob | Uint8Array | null) {
+  const [info, setInfo] = React.useState<GifInfo | null>(null);
+  React.useEffect(() => {
+    setInfo(null);
+    if (!src) return;
+    let live = true;
+    const bytes =
+      src instanceof Uint8Array
+        ? Promise.resolve(src)
+        : src.arrayBuffer().then((a) => new Uint8Array(a));
+    void bytes.then((b) => live && setInfo(gifInfo(b)));
+    return () => {
+      live = false;
+    };
+  }, [src]);
+  return info;
+}
+
+/** Compact label/value table for a file: dimensions, format, size, frames. */
+function Facts({
+  size,
+  ext,
+  bytes,
+  gif,
+  note,
+  className,
+}: {
+  size: { w: number; h: number } | null;
+  ext: string;
+  bytes: number;
+  gif: GifInfo | null;
+  note?: string;
+  className?: string;
+}) {
+  const rows: [string, React.ReactNode][] = [];
+  if (size) rows.push(["dimensions", `${size.w} × ${size.h}`]);
+  rows.push(["format", ext.toUpperCase()], ["file size", formatBytes(bytes)]);
+  if (gif && gif.frames > 1) {
+    rows.push(["frames", gif.frames]);
+    rows.push(["duration", `${(gif.duration / 1000).toFixed(1)} s`]);
+  }
+  if (note) rows.push(["settings", note]);
+  return (
+    <dl className={cn("grid grid-cols-[max-content_auto] gap-x-3 gap-y-0.5 text-label", className)}>
+      {rows.map(([k, v]) => (
+        <React.Fragment key={k}>
+          <dt className="text-muted-foreground">{k}</dt>
+          <dd className="text-foreground tabular-nums">{v}</dd>
+        </React.Fragment>
+      ))}
+    </dl>
+  );
 }
 
 export function useRun(props: Pick<ToolBodyProps, "setBusy" | "setError" | "setProgress">) {
@@ -448,9 +501,15 @@ export function useRun(props: Pick<ToolBodyProps, "setBusy" | "setError" | "setP
   // the first one's cleanup cleared the busy state while the second was still
   // going, and both published, leaving two history entries for one action.
   const running = React.useRef(false);
-  return React.useCallback(
-    async (message: string, fn: () => Promise<void>) => {
-      if (running.current) return;
+  // Settings change mid-run: remember only the newest request and run it
+  // once the current encode finishes, so a slider drag ends on its final value.
+  const pending = React.useRef<[string, () => Promise<void>] | null>(null);
+  const run = React.useCallback(
+    async (message: string, fn: () => Promise<void>): Promise<void> => {
+      if (running.current) {
+        pending.current = [message, fn];
+        return;
+      }
       running.current = true;
       setError(null);
       setBusy(true, message);
@@ -463,7 +522,27 @@ export function useRun(props: Pick<ToolBodyProps, "setBusy" | "setError" | "setP
         running.current = false;
         setBusy(false);
       }
+      const next = pending.current;
+      pending.current = null;
+      if (next) void run(...next);
     },
     [setBusy, setError, setProgress],
   );
+  return run;
+}
+
+/**
+ * Runs the tool whenever its settings change (debounced), so there is no
+ * "generate" button: `deps` are the settings, `ready` is what the button's
+ * disabled state used to check.
+ */
+export function useAutoRun(go: () => unknown, deps: React.DependencyList, ready = true) {
+  const goRef = React.useRef(go);
+  goRef.current = go;
+  React.useEffect(() => {
+    if (!ready) return;
+    const t = setTimeout(() => void goRef.current(), 250);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, ...deps]);
 }
