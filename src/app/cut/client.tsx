@@ -1,8 +1,7 @@
 "use client";
 import * as React from "react";
-import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/field";
-import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
+import { ToolShell, useAutoRun, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { ffmpegOnce, paletteGifArgs, probe } from "@/lib/engines/ffmpeg";
 import { getTool } from "@/lib/tools";
 import { clamp } from "@/lib/utils";
@@ -97,6 +96,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       publish({ data: out, ext, note: `${start}s → ${end}s` });
     });
 
+  useAutoRun(go, [file, start, end], !!file && !!duration);
   return (
     <>
       <div className="grid gap-4">
@@ -170,10 +170,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
           </p>
         ) : null}
       </div>
-
-      <Button onClick={go} disabled={!file || !duration}>
-        Cut
-      </Button>
     </>
   );
 }

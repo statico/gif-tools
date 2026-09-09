@@ -1,8 +1,7 @@
 "use client";
 import * as React from "react";
-import { Button } from "@/components/ui/button";
 import { ColorField, Input, Label, Range, Select } from "@/components/ui/field";
-import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
+import { ToolShell, useAutoRun, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { encodeGif, loadImage, renderFrames } from "@/lib/engines/gif-encode";
 import { getTool } from "@/lib/tools";
 
@@ -127,6 +126,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       setProgress(1);
     });
 
+  useAutoRun(go, [file, size, frames, delay, intensity, axes, edge, img], !!file);
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -211,10 +211,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
           )}
         </div>
       </div>
-
-      <Button onClick={go} disabled={!file}>
-        Make it intensify
-      </Button>
     </>
   );
 }

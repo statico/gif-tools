@@ -55,3 +55,41 @@ export function inkMetrics(m: TextMetrics): { w: number; dx: number } {
   // Fall back to the advance width if a browser leaves the ink box empty.
   return w > 0 ? { w, dx: (r - l) / 2 } : { w: Math.max(1, m.width), dx: 0 };
 }
+
+export interface GifInfo {
+  frames: number;
+  /** Total of the per-frame delays, in milliseconds. */
+  duration: number;
+}
+
+/** Walks a GIF's blocks to count frames and sum delays. Null if it isn't a GIF. */
+export function gifInfo(b: Uint8Array): GifInfo | null {
+  if (b.length < 13 || b[0] !== 0x47 || b[1] !== 0x49 || b[2] !== 0x46) return null;
+  let pos = 13;
+  if (b[10] & 0x80) pos += 3 << ((b[10] & 7) + 1);
+  const skipSubBlocks = () => {
+    let n: number;
+    while (pos < b.length && (n = b[pos++]) !== 0) pos += n;
+  };
+  let frames = 0;
+  let duration = 0;
+  let delay = 0;
+  while (pos < b.length) {
+    const id = b[pos++];
+    if (id === 0x2c) {
+      pos += 8;
+      const f = b[pos++];
+      if (f & 0x80) pos += 3 << ((f & 7) + 1);
+      pos++;
+      skipSubBlocks();
+      frames++;
+      duration += delay;
+      delay = 0;
+    } else if (id === 0x21) {
+      const label = b[pos++];
+      if (label === 0xf9) delay = (b[pos + 2] | (b[pos + 3] << 8) || 10) * 10;
+      skipSubBlocks();
+    } else break;
+  }
+  return { frames, duration };
+}

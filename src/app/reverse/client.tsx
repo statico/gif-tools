@@ -1,8 +1,7 @@
 "use client";
 import * as React from "react";
-import { Button } from "@/components/ui/button";
 import { Label, Select } from "@/components/ui/field";
-import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
+import { ToolShell, useAutoRun, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { ffmpegOnce, paletteGifArgs, probe } from "@/lib/engines/ffmpeg";
 import { getTool } from "@/lib/tools";
 
@@ -102,6 +101,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       ? "Forward, then backwards: about twice the frames, minus the duplicated turnaround frame."
       : "Every frame is kept, played back to front: same frame count, same length.";
 
+  useAutoRun(go, [file, mode], !!file);
   return (
     <>
       <div>
@@ -130,10 +130,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
         <p className="text-ui text-foreground tabular-nums">{headline}</p>
         <p className="text-label text-muted-foreground tabular-nums">{detail}</p>
       </div>
-
-      <Button onClick={go} disabled={!file}>
-        {mode === "boomerang" ? "Make boomerang" : "Reverse"}
-      </Button>
     </>
   );
 }

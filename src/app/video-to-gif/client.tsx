@@ -1,8 +1,7 @@
 "use client";
 import * as React from "react";
-import { Button } from "@/components/ui/button";
 import { Checkbox, Input, Label, Range, Readout } from "@/components/ui/field";
-import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
+import { ToolShell, useAutoRun, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { ffmpegOnce, paletteGifArgs, probe } from "@/lib/engines/ffmpeg";
 import { getTool } from "@/lib/tools";
 
@@ -88,6 +87,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       });
     });
 
+  useAutoRun(go, [file, start, end, fps, width, colors, dither], !!file);
   return (
     <>
       <p role="status" aria-live="polite" className="text-ui text-muted-foreground">
@@ -183,10 +183,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
           ] as const
         }
       />
-
-      <Button onClick={go} disabled={!file}>
-        Convert to GIF
-      </Button>
     </>
   );
 }

@@ -1,8 +1,7 @@
 "use client";
 import * as React from "react";
-import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/field";
-import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
+import { ToolShell, useAutoRun, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { ffmpegOnce, paletteGifArgs } from "@/lib/engines/ffmpeg";
 import { getTool } from "@/lib/tools";
 import { outExt } from "@/lib/format";
@@ -161,6 +160,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
 
   const isVideoFile = !!file?.type.startsWith("video/");
 
+  useAutoRun(go, [file, sel, ratioKey], !!file && !!src);
   return (
     <>
       {url && src ? (
@@ -296,10 +296,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
             ? NO_PREVIEW
             : "Choose a file to read its dimensions."}
       </p>
-
-      <Button onClick={go} disabled={!file || !src}>
-        Crop
-      </Button>
     </>
   );
 }

@@ -3,7 +3,7 @@ import * as React from "react";
 import { Pipette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ColorField, Range } from "@/components/ui/field";
-import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
+import { ToolShell, useAutoRun, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { ffmpegOnce, paletteGifArgs } from "@/lib/engines/ffmpeg";
 import { NO_PREVIEW, useFirstFrame } from "@/lib/preview";
 import { getTool } from "@/lib/tools";
@@ -147,6 +147,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       });
     });
 
+  useAutoRun(go, [file, color, tolerance, feather, auto], !!file);
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -216,10 +217,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       ) : file && failed ? (
         <p className="text-label text-muted-foreground">{NO_PREVIEW}</p>
       ) : null}
-
-      <Button onClick={go} disabled={!file}>
-        Remove background
-      </Button>
     </>
   );
 }

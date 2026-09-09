@@ -3,7 +3,7 @@ import * as React from "react";
 import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label, Range, Select } from "@/components/ui/field";
-import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
+import { ToolShell, useAutoRun, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { ffmpegOnce, paletteGifArgs } from "@/lib/engines/ffmpeg";
 import { useFirstFrame } from "@/lib/preview";
 import { getTool } from "@/lib/tools";
@@ -284,6 +284,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       publish({ data: out, ext, note: filters });
     });
 
+  useAutoRun(go, [file, s], !!file);
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -397,9 +398,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       ) : null}
 
       <div className="flex flex-wrap gap-2">
-        <Button onClick={go} disabled={!file}>
-          Apply effects
-        </Button>
         <Button variant="outline" onClick={() => setS(DEFAULTS)}>
           <RotateCcw aria-hidden="true" />
           Reset to defaults

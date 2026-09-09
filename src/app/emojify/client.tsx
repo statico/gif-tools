@@ -2,7 +2,7 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { ColorField, Input, Label, Range, Select } from "@/components/ui/field";
-import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
+import { ToolShell, useAutoRun, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { encodeGif, loadImage, renderFrames } from "@/lib/engines/gif-encode";
 import { getTool } from "@/lib/tools";
 import { hslToRgb, rgbToHsl } from "@/lib/color";
@@ -305,6 +305,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       setProgress(1);
     });
 
+  useAutoRun(go, [file, effect, size, frames, delay, amount, cw, edge, img], !!file);
   return (
     <>
       <div role="group" aria-labelledby="emo-effect-label">
@@ -427,10 +428,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
         </div>
         <ColorField id="emo-bg" label="background colour" value={bg} onChange={setBg} clearable />
       </div>
-
-      <Button onClick={go} disabled={!file}>
-        Make the emoji
-      </Button>
     </>
   );
 }
@@ -441,7 +438,7 @@ export default function EmojifyTool() {
       tool={tool}
       accept="image/png,image/jpeg,image/webp,image/gif"
       defaultName="emoji"
-      hint="Pick an effect and watch the live preview before you encode. Each effect loads its own tempo, which you can then override."
+      hint="Pick an effect; the result updates as you go. Each effect loads its own tempo, which you can then override."
     >
       {(props) => <Body {...props} />}
     </ToolShell>

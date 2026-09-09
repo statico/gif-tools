@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HistoryPicker } from "@/components/history-picker";
 import { ColorField, Input, Label, Select } from "@/components/ui/field";
-import { ToolShell, useRun, type ToolBodyProps } from "@/components/tool-shell";
+import { ToolShell, useAutoRun, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { encodeGif, loadImage, renderFrames } from "@/lib/engines/gif-encode";
 import { getTool } from "@/lib/tools";
 import { clamp } from "@/lib/utils";
@@ -218,6 +218,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       });
     });
 
+  useAutoRun(go, [frames, delay, loop, width, fit, bg], frames.length > 0);
   return (
     <>
       <div
@@ -413,7 +414,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       </div>
 
       {fit === "contain" ? (
-        <ColorField id="gm-bg" label="letterbox colour" value={bg} onChange={setBg} clearable />
+        <ColorField id="gm-bg" label="background colour" value={bg} onChange={setBg} clearable />
       ) : null}
 
       <div>
@@ -443,10 +444,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
           </p>
         ) : null}
       </div>
-
-      <Button onClick={go} disabled={!frames.length}>
-        Build GIF
-      </Button>
     </>
   );
 }
