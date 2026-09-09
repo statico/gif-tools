@@ -3,6 +3,7 @@ import { JetBrains_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import { ThemeProvider } from "@/components/theme";
 import { SiteFooter, SiteNav } from "@/components/site-nav";
+import { CarryProvider, ToolStrip } from "@/components/tool-strip";
 import { SITE } from "@/lib/site";
 import "./globals.css";
 
@@ -55,9 +56,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             Skip to content
           </a>
           <SiteNav />
-          <main id="main" className="px-4 sm:px-6 py-6 max-w-7xl mx-auto w-full">
-            {children}
-          </main>
+          <CarryProvider>
+            <ToolStrip />
+            <main id="main" className="px-4 sm:px-6 py-6 max-w-7xl mx-auto w-full">
+              {children}
+            </main>
+          </CarryProvider>
           <SiteFooter />
         </ThemeProvider>
       </body>
