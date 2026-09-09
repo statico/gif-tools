@@ -4,27 +4,25 @@ import { Button } from "@/components/ui/button";
 import { Checkbox, ColorField, Input, Label, Range, Select } from "@/components/ui/field";
 import { ToolShell, useAutoRun, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { encodeGif, renderFrames } from "@/lib/engines/gif-encode";
+import { BRUSH, SANS, useBrushFont } from "@/lib/brush-font";
 import { getTool } from "@/lib/tools";
 import { inkMetrics } from "@/lib/utils";
 
 const tool = getTool("number");
-
-// Heavy sans; the exact face depends on the viewer's OS (Impact on Windows,
-// Arial Black elsewhere). All of them are condensed enough to read at 22px.
-const FONT = 'Impact, "Arial Black", "Helvetica Neue", Arial, sans-serif';
 
 interface Style {
   fill: string;
   fill2: string;
   stroke: string;
   glow: boolean;
+  brush?: boolean;
 }
 
 const PRESETS: { id: string; label: string; style: Style }[] = [
   {
     id: "classic",
     label: "classic 100",
-    style: { fill: "#dd2e44", fill2: "#dd2e44", stroke: "", glow: false },
+    style: { fill: "#dd2e44", fill2: "#dd2e44", stroke: "", glow: false, brush: true },
   },
   {
     id: "gold",
@@ -76,7 +74,7 @@ function draw(ctx: CanvasRenderingContext2D, S: number, o: Opts, t: number) {
   const uBlock = o.underline === "none" ? 0 : o.underline === "single" ? th : th * 3;
   const uSpace = uBlock ? uBlock + S * 0.07 : 0;
   const textH = Math.max(1, inner - uSpace);
-  const font = (px: number) => `${o.italic ? "italic " : ""}900 ${px}px ${FONT}`;
+  const font = (px: number) => `${o.italic ? "italic " : ""}900 ${px}px ${o.brush ? BRUSH : SANS}`;
 
   // Auto-fit: measure at a reference size, then scale down to the tighter of
   // the width and height budgets so 4-digit numbers never clip.
@@ -134,6 +132,17 @@ function draw(ctx: CanvasRenderingContext2D, S: number, o: Opts, t: number) {
     const ux = Math.min(tw, inner) / 2;
     let uy = textH / 2 + S * 0.05;
     const bar = () => {
+      if (o.brush) {
+        // Two loose swoops, like the strokes under the emoji.
+        ctx.strokeStyle = paint;
+        ctx.lineCap = "round";
+        ctx.lineWidth = th;
+        ctx.beginPath();
+        ctx.moveTo(-ux + th / 2, uy + th);
+        ctx.quadraticCurveTo(0, uy - th * 0.4, ux - th / 2, uy + th / 2);
+        ctx.stroke();
+        return;
+      }
       if (o.stroke) {
         ctx.lineWidth = fs * 0.1;
         ctx.strokeStyle = o.stroke;
@@ -176,6 +185,7 @@ function Body({
   const [bg, setBg] = React.useState(""); // "" = transparent
   const transparent = !bg;
   const [anim, setAnim] = React.useState<Anim>("pulse");
+  const fontReady = useBrushFont();
 
   const opts: Opts = {
     ...style,
@@ -189,26 +199,6 @@ function Body({
   };
   const optsRef = React.useRef(opts);
   optsRef.current = opts;
-
-  const big = React.useRef<HTMLCanvasElement>(null);
-  const small = React.useRef<HTMLCanvasElement>(null);
-
-  // Live preview. Static when the user prefers reduced motion or wants a PNG.
-  React.useEffect(() => {
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const animate = format === "gif" && !reduced;
-    let raf = 0;
-    const paint = (now: number) => {
-      const t = animate ? (now / 1200) % 1 : 0;
-      for (const ref of [big, small]) {
-        const ctx = ref.current?.getContext("2d");
-        if (ctx) draw(ctx, size, optsRef.current, t);
-      }
-      if (animate) raf = requestAnimationFrame(paint);
-    };
-    paint(0);
-    return () => cancelAnimationFrame(raf);
-  }, [size, format, anim, text, style, italic, underline, thick, transparent, bg]);
 
   const go = () =>
     run("Rendering", async () => {
@@ -248,7 +238,7 @@ function Body({
     setStyle(p.style);
   };
 
-  useAutoRun(go, [text, format, style, italic, underline, thick, size, anim]);
+  useAutoRun(go, [text, format, style, italic, underline, thick, size, anim], fontReady);
   return (
     <>
       <div>
@@ -339,17 +329,11 @@ function Body({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <Label htmlFor="num-format">output</Label>
-          <Select
-            id="num-format"
-            value={format}
-            onChange={(e) => setFormat(e.target.value as "png" | "gif")}
-          >
-            <option value="gif">animated GIF</option>
-            <option value="png">static PNG</option>
-          </Select>
-        </div>
+        <Checkbox
+          label="Animate (GIF instead of PNG)"
+          checked={format === "gif"}
+          onChange={(e) => setFormat(e.target.checked ? "gif" : "png")}
+        />
         {format === "gif" ? (
           <div>
             <Label htmlFor="num-anim">animation</Label>
@@ -361,37 +345,6 @@ function Body({
           </div>
         ) : null}
       </div>
-
-      <div>
-        <Label>live preview</Label>
-        <div className="flex items-center gap-4 border border-border p-3">
-          <div className="checkerboard shrink-0 border border-border">
-            <canvas
-              ref={big}
-              width={size}
-              height={size}
-              className="block size-32"
-              role="img"
-              aria-label={`Preview of ${text || "100"} in the ${preset} style`}
-            />
-          </div>
-          <div className="min-w-0">
-            <div
-              className="checkerboard inline-block border border-border"
-              style={{ "--checker-size": "8px" } as React.CSSProperties}
-            >
-              <canvas
-                ref={small}
-                width={size}
-                height={size}
-                className="block size-[22px]"
-                aria-hidden="true"
-              />
-            </div>
-            <p className="text-label text-muted-foreground mt-1">actual Slack size (22px)</p>
-          </div>
-        </div>
-      </div>
     </>
   );
 }
@@ -399,7 +352,7 @@ function Body({
 export default function NumberTool() {
   // Held here so the download name and its extension can track the controls.
   const [text, setText] = React.useState("100");
-  const [format, setFormat] = React.useState<"png" | "gif">("gif");
+  const [format, setFormat] = React.useState<"png" | "gif">("png");
   return (
     <ToolShell
       tool={tool}

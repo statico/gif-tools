@@ -118,7 +118,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   const img = anim.frames[0] ?? null;
   // Animated sources: enough output frames to play the whole source loop.
   const count = outFrames(anim, frames, delay);
-  const canvasRef = React.useRef<HTMLCanvasElement>(null);
 
   const settings: Settings = {
     size,
@@ -131,30 +130,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
     to,
     bg: bg || null,
   };
-
-  React.useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !img) return;
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    if (!ctx) return;
-    const reduced =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) {
-      drawFrame(ctx, img, 0, settings);
-      return;
-    }
-    let raf = 0;
-    const start = performance.now();
-    const tick = (now: number) => {
-      const i = Math.floor(((now - start) / delay) % count);
-      drawFrame(ctx, frameAt(anim, i * delay), i % frames, settings);
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [img, size, frames, delay, palette, mode, threshold, from, to, bg]);
 
   const go = () =>
     run("Partying", async () => {
@@ -249,28 +224,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       </div>
 
       <ColorField id="party-bg" label="background colour" value={bg} onChange={setBg} clearable />
-
-      <div>
-        <Label>preview</Label>
-        <div
-          className={`flex items-center justify-center border border-border p-4 ${
-            bg ? "" : "checkerboard"
-          }`}
-        >
-          {img ? (
-            <canvas
-              ref={canvasRef}
-              width={size}
-              height={size}
-              role="img"
-              aria-label="Live preview of the party emoji"
-              style={{ width: 128, height: 128, imageRendering: size < 128 ? "pixelated" : "auto" }}
-            />
-          ) : (
-            <p className="text-ui text-muted-foreground py-8">Choose an image to preview.</p>
-          )}
-        </div>
-      </div>
     </>
   );
 }

@@ -59,7 +59,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   const img = anim.frames[0] ?? null;
   // Animated sources: enough output frames to play the whole source loop.
   const count = outFrames(anim, frames, delay);
-  const canvasRef = React.useRef<HTMLCanvasElement>(null);
 
   const settings: Settings = {
     size,
@@ -70,31 +69,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
     edge,
     bg: bg || null,
   };
-
-  // Live preview. Static first frame when the user asked for less motion.
-  React.useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !img) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const reduced =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) {
-      drawFrame(ctx, img, 0, settings);
-      return;
-    }
-    let raf = 0;
-    const start = performance.now();
-    const tick = (now: number) => {
-      const i = Math.floor(((now - start) / delay) % count);
-      drawFrame(ctx, frameAt(anim, i * delay), i % frames, settings);
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [img, size, frames, delay, intensity, axes, edge, bg]);
 
   const go = () =>
     run("Shaking", async () => {
@@ -174,28 +148,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
           </Select>
         </div>
         <ColorField id="int-bg" label="background colour" value={bg} onChange={setBg} clearable />
-      </div>
-
-      <div>
-        <Label>preview</Label>
-        <div
-          className={`flex items-center justify-center border border-border p-4 ${
-            bg ? "" : "checkerboard"
-          }`}
-        >
-          {img ? (
-            <canvas
-              ref={canvasRef}
-              width={size}
-              height={size}
-              aria-label="Live preview of the intensified emoji"
-              role="img"
-              style={{ width: 128, height: 128, imageRendering: size < 128 ? "pixelated" : "auto" }}
-            />
-          ) : (
-            <p className="text-ui text-muted-foreground py-8">Choose an image to preview.</p>
-          )}
-        </div>
       </div>
     </>
   );
