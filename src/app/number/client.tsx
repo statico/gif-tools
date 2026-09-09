@@ -47,7 +47,8 @@ const PRESETS: { id: string; label: string; style: Style }[] = [
 ];
 
 type Underline = "none" | "single" | "double";
-type Anim = "pulse" | "shake" | "rainbow";
+const ANIMS = ["pulse", "shake", "rainbow"] as const;
+type Anim = (typeof ANIMS)[number];
 
 interface Opts extends Style {
   text: string;
@@ -56,7 +57,7 @@ interface Opts extends Style {
   thick: number;
   bg: string;
   transparent: boolean;
-  anim: Anim | null;
+  anims: Anim[];
 }
 
 /** Draw one frame. `t` is 0..1 through the animation loop. */
@@ -93,16 +94,16 @@ function draw(ctx: CanvasRenderingContext2D, S: number, o: Opts, t: number) {
 
   ctx.save();
   ctx.translate(S / 2, margin + textH / 2);
-  if (o.anim === "pulse") {
+  if (o.anims.includes("pulse")) {
     const s = 1 + 0.07 * Math.sin(t * 2 * Math.PI);
     ctx.scale(s, s);
   }
-  if (o.anim === "shake") {
+  if (o.anims.includes("shake")) {
     ctx.translate(Math.sin(t * 4 * Math.PI) * S * 0.022, Math.cos(t * 6 * Math.PI) * S * 0.016);
   }
 
   let paint: string | CanvasGradient;
-  if (o.anim === "rainbow") {
+  if (o.anims.includes("rainbow")) {
     paint = `hsl(${Math.round(t * 360)} 92% 55%)`;
   } else if (o.fill2 !== o.fill) {
     const g = ctx.createLinearGradient(0, -textH / 2, 0, textH / 2);
@@ -114,8 +115,9 @@ function draw(ctx: CanvasRenderingContext2D, S: number, o: Opts, t: number) {
   }
 
   if (o.glow) {
-    ctx.shadowColor = o.anim === "rainbow" ? (paint as string) : o.fill;
-    ctx.shadowBlur = fs * (o.anim === "pulse" ? 0.18 + 0.12 * Math.sin(t * 2 * Math.PI) : 0.24);
+    ctx.shadowColor = o.anims.includes("rainbow") ? (paint as string) : o.fill;
+    ctx.shadowBlur =
+      fs * (o.anims.includes("pulse") ? 0.18 + 0.12 * Math.sin(t * 2 * Math.PI) : 0.24);
   }
 
   const y = (asc - desc) / 2;
@@ -167,15 +169,16 @@ function Body({
   publish,
   text,
   setText,
-  format,
-  setFormat,
+  anims,
+  setAnims,
 }: ToolBodyProps & {
   text: string;
   setText: (v: string) => void;
-  format: "png" | "gif";
-  setFormat: (v: "png" | "gif") => void;
+  anims: Anim[];
+  setAnims: (v: Anim[]) => void;
 }) {
   const run = useRun({ setBusy, setError, setProgress });
+  const format = anims.length ? "gif" : "png";
   const [preset, setPreset] = React.useState("classic");
   const [style, setStyle] = React.useState<Style>(PRESETS[0].style);
   const [italic, setItalic] = React.useState(true);
@@ -184,7 +187,6 @@ function Body({
   const [size, setSize] = React.useState(128);
   const [bg, setBg] = React.useState(""); // "" = transparent
   const transparent = !bg;
-  const [anim, setAnim] = React.useState<Anim>("pulse");
   const fontReady = useBrushFont();
 
   const opts: Opts = {
@@ -195,7 +197,7 @@ function Body({
     thick,
     bg,
     transparent,
-    anim: format === "gif" ? anim : null,
+    anims,
   };
   const optsRef = React.useRef(opts);
   optsRef.current = opts;
@@ -209,7 +211,7 @@ function Body({
         c.width = c.height = size;
         const ctx = c.getContext("2d");
         if (!ctx) throw new Error("Your browser blocked the 2D canvas this tool needs.");
-        draw(ctx, size, { ...o, anim: null }, 0);
+        draw(ctx, size, { ...o, anims: [] }, 0);
         setProgress(0.6);
         const blob = await new Promise<Blob | null>((res) => c.toBlob(res, "image/png"));
         if (!blob) throw new Error("The browser could not encode the PNG. Try a smaller size.");
@@ -227,7 +229,7 @@ function Body({
         publish({
           data: encodeGif(frames, { delayMs: 70, transparent, maxColors: 128 }),
           ext: "gif",
-          note: `${size}px ${preset} ${anim}`,
+          note: `${size}px ${preset} ${anims.join("+") || "static"}`,
         });
       }
       setProgress(1);
@@ -238,7 +240,7 @@ function Body({
     setStyle(p.style);
   };
 
-  useAutoRun(go, [text, format, style, italic, underline, thick, size, anim], fontReady);
+  useAutoRun(go, [text, format, style, italic, underline, thick, size, anims], fontReady);
   return (
     <>
       <div>
@@ -328,22 +330,23 @@ function Body({
         <ColorField id="num-bg" label="background colour" value={bg} onChange={setBg} clearable />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Checkbox
-          label="Animate (GIF instead of PNG)"
-          checked={format === "gif"}
-          onChange={(e) => setFormat(e.target.checked ? "gif" : "png")}
-        />
-        {format === "gif" ? (
-          <div>
-            <Label htmlFor="num-anim">animation</Label>
-            <Select id="num-anim" value={anim} onChange={(e) => setAnim(e.target.value as Anim)}>
-              <option value="pulse">pulse / glow</option>
-              <option value="shake">shake</option>
-              <option value="rainbow">rainbow cycle</option>
-            </Select>
-          </div>
-        ) : null}
+      <div>
+        <Label>animation</Label>
+        <div className="flex flex-wrap gap-x-5 gap-y-2">
+          {ANIMS.map((a) => (
+            <Checkbox
+              key={a}
+              label={a}
+              checked={anims.includes(a)}
+              onChange={(e) =>
+                setAnims(e.target.checked ? [...anims, a] : anims.filter((x) => x !== a))
+              }
+            />
+          ))}
+        </div>
+        <p className="text-label text-muted-foreground mt-1">
+          Tick any to get an animated GIF; none gives a static PNG.
+        </p>
       </div>
     </>
   );
@@ -352,7 +355,8 @@ function Body({
 export default function NumberTool() {
   // Held here so the download name and its extension can track the controls.
   const [text, setText] = React.useState("100");
-  const [format, setFormat] = React.useState<"png" | "gif">("png");
+  const [anims, setAnims] = React.useState<Anim[]>([]);
+  const format = anims.length ? "gif" : "png";
   return (
     <ToolShell
       tool={tool}
@@ -363,7 +367,7 @@ export default function NumberTool() {
       hint="Type a number, pick a style and download it. The text auto-shrinks to fit the square, so 1000 works as well as 100."
     >
       {(props) => (
-        <Body {...props} text={text} setText={setText} format={format} setFormat={setFormat} />
+        <Body {...props} text={text} setText={setText} anims={anims} setAnims={setAnims} />
       )}
     </ToolShell>
   );

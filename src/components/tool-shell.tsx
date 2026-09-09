@@ -350,6 +350,22 @@ export function ToolShell({
                 </p>
               )}
             </div>
+            {previewUrl && tool.category === "emoji" && resultMime?.startsWith("image/") ? (
+              <div className="flex items-center gap-2" title="How it reads at Slack's 22px">
+                {(["#ffffff", "#1a1d21"] as const).map((bg) => (
+                  <span
+                    key={bg}
+                    className="grid size-11 place-items-center border border-border"
+                    style={{ background: bg }}
+                  >
+                    <img src={previewUrl} alt="" className="size-[22px] object-contain" />
+                  </span>
+                ))}
+                <span className="text-label text-muted-foreground">
+                  at Slack size, on light and dark
+                </span>
+              </div>
+            ) : null}
             {result ? (
               <Facts
                 size={resultSize}
