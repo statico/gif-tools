@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox, ColorField, Input, Label, Range, Select } from "@/components/ui/field";
 import { ToolShell, useAutoRun, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { encodeGif, renderFrames } from "@/lib/engines/gif-encode";
+import { BRUSH, SANS, useBrushFont } from "@/lib/brush-font";
 import { getTool } from "@/lib/tools";
 import { inkMetrics } from "@/lib/utils";
 
@@ -11,7 +12,6 @@ const tool = getTool("text-emoji");
 
 // Heavy sans; the exact face depends on the viewer's OS (Impact on Windows,
 // Arial Black elsewhere). All of them stay legible at Slack's 22px.
-const FONT = 'Impact, "Arial Black", "Helvetica Neue", Arial, sans-serif';
 
 interface Style {
   fill: string;
@@ -24,6 +24,7 @@ interface Style {
   italic: boolean;
   glow: boolean;
   shadow: boolean;
+  brush?: boolean;
 }
 
 const base: Style = {
@@ -40,6 +41,11 @@ const base: Style = {
 };
 
 const PRESETS: { id: string; label: string; style: Style }[] = [
+  {
+    id: "sunset",
+    label: "sunset",
+    style: { ...base, fill: "#ffb02e", fill2: "#ff2e88", stroke: "#2a0d1e", strokeW: 7 },
+  },
   { id: "classic", label: "classic", style: { ...base } },
   {
     id: "caution",
@@ -82,11 +88,6 @@ const PRESETS: { id: string; label: string; style: Style }[] = [
     id: "blueprint",
     label: "blueprint",
     style: { ...base, bg: "#1f6feb", transparent: false, stroke: "", strokeW: 0, italic: true },
-  },
-  {
-    id: "sunset",
-    label: "sunset",
-    style: { ...base, fill: "#ffb02e", fill2: "#ff2e88", stroke: "#2a0d1e", strokeW: 7 },
   },
   {
     id: "bubblegum",
@@ -177,7 +178,7 @@ function draw(ctx: CanvasRenderingContext2D, S: number, o: Opts, t: number) {
   const inner = S - margin * 2;
   const gap = inner * 0.03;
   const budget = (inner - gap * (lines.length - 1)) / lines.length;
-  const font = (px: number) => `${o.italic ? "italic " : ""}900 ${px}px ${FONT}`;
+  const font = (px: number) => `${o.italic ? "italic " : ""}900 ${px}px ${o.brush ? BRUSH : SANS}`;
 
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
@@ -281,7 +282,7 @@ function Body({
   setFormat: (v: "png" | "gif") => void;
 }) {
   const run = useRun({ setBusy, setError, setProgress });
-  const [preset, setPreset] = React.useState("classic");
+  const [preset, setPreset] = React.useState("sunset");
   const [style, setStyle] = React.useState<Style>(PRESETS[0].style);
   const [lineMode, setLineMode] = React.useState("auto");
   const [size, setSize] = React.useState(128);
@@ -291,26 +292,6 @@ function Body({
   const opts: Opts = { ...style, text, lines, anim: format === "gif" ? anim : null };
   const optsRef = React.useRef(opts);
   optsRef.current = opts;
-
-  const big = React.useRef<HTMLCanvasElement>(null);
-  const small = React.useRef<HTMLCanvasElement>(null);
-
-  // Live preview. Static when the user prefers reduced motion or wants a PNG.
-  React.useEffect(() => {
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const animate = format === "gif" && !reduced;
-    let raf = 0;
-    const paint = (now: number) => {
-      const t = animate ? (now / 1200) % 1 : 0;
-      for (const ref of [big, small]) {
-        const ctx = ref.current?.getContext("2d");
-        if (ctx) draw(ctx, size, optsRef.current, t);
-      }
-      if (animate) raf = requestAnimationFrame(paint);
-    };
-    paint(0);
-    return () => cancelAnimationFrame(raf);
-  }, [size, format, anim, text, style, lines]);
 
   const go = () =>
     run("Rendering", async () => {
@@ -350,7 +331,8 @@ function Body({
     setPreset("custom");
   };
 
-  useAutoRun(go, [text, format, style, lineMode, size, anim]);
+  const fontReady = useBrushFont();
+  useAutoRun(go, [text, format, style, lineMode, size, anim], fontReady);
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -472,6 +454,17 @@ function Body({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
+          <Label htmlFor="te-font">typeface</Label>
+          <Select
+            id="te-font"
+            value={style.brush ? "brush" : "sans"}
+            onChange={(e) => setStyle((s) => ({ ...s, brush: e.target.value === "brush" }))}
+          >
+            <option value="sans">Impact — heavy sans</option>
+            <option value="brush">Permanent Marker — hand-drawn brush</option>
+          </Select>
+        </div>
+        <div>
           <Label htmlFor="te-size">size</Label>
           <Select id="te-size" value={size} onChange={(e) => setSize(Number(e.target.value))}>
             <option value={64}>64 × 64</option>
@@ -502,37 +495,6 @@ function Body({
           </Select>
         </div>
       ) : null}
-
-      <div>
-        <Label>live preview</Label>
-        <div className="flex items-center gap-4 border border-border p-3">
-          <div className="checkerboard shrink-0 border border-border">
-            <canvas
-              ref={big}
-              width={size}
-              height={size}
-              className="block size-32"
-              role="img"
-              aria-label={`Preview of "${text}" on ${lines} line${lines === 1 ? "" : "s"} in the ${preset} style`}
-            />
-          </div>
-          <div className="min-w-0">
-            <div
-              className="checkerboard inline-block border border-border"
-              style={{ "--checker-size": "8px" } as React.CSSProperties}
-            >
-              <canvas
-                ref={small}
-                width={size}
-                height={size}
-                className="block size-[22px]"
-                aria-hidden="true"
-              />
-            </div>
-            <p className="text-label text-muted-foreground mt-1">actual Slack size (22px)</p>
-          </div>
-        </div>
-      </div>
     </>
   );
 }
