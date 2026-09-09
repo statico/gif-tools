@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox, ColorField, Input, Label, Range, Select } from "@/components/ui/field";
 import { ToolShell, useAutoRun, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { encodeGif, renderFrames } from "@/lib/engines/gif-encode";
-import { BRUSH, SANS, useBrushFont } from "@/lib/brush-font";
+import { Shuffle } from "lucide-react";
+import { FACES, FACE_IDS, faceOptions, useFace, type FaceId } from "@/lib/fonts";
 import { getTool } from "@/lib/tools";
 import { inkMetrics } from "@/lib/utils";
 
@@ -24,7 +25,6 @@ interface Style {
   italic: boolean;
   glow: boolean;
   shadow: boolean;
-  brush?: boolean;
 }
 
 const base: Style = {
@@ -127,6 +127,7 @@ interface Opts extends Style {
   text: string;
   lines: number;
   anims: Anim[];
+  face: FaceId;
 }
 
 /** A typed `\n` (or a real newline) forces a line break and overrides the line count. */
@@ -179,7 +180,7 @@ function draw(ctx: CanvasRenderingContext2D, S: number, o: Opts, t: number) {
   const inner = S - margin * 2;
   const gap = inner * 0.03;
   const budget = (inner - gap * (lines.length - 1)) / lines.length;
-  const font = (px: number) => `${o.italic ? "italic " : ""}900 ${px}px ${o.brush ? BRUSH : SANS}`;
+  const font = (px: number) => `${o.italic ? "italic " : ""}900 ${px}px ${FACES[o.face].family}`;
 
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
@@ -288,9 +289,10 @@ function Body({
   const [style, setStyle] = React.useState<Style>(PRESETS[0].style);
   const [lineMode, setLineMode] = React.useState("auto");
   const [size, setSize] = React.useState(128);
+  const [face, setFace] = React.useState<FaceId>("luckiest");
 
   const lines = lineMode === "auto" ? autoLines(text) : Number(lineMode);
-  const opts: Opts = { ...style, text, lines, anims };
+  const opts: Opts = { ...style, text, lines, anims, face };
   const optsRef = React.useRef(opts);
   optsRef.current = opts;
 
@@ -332,8 +334,33 @@ function Body({
     setPreset("custom");
   };
 
-  const fontReady = useBrushFont();
-  useAutoRun(go, [text, format, style, lineMode, size, anims], fontReady);
+  const fontReady = useFace(face);
+
+  // Dice roll: a preset for the shape, then fresh colours and a random face.
+  const randomize = () => {
+    const pick = <T,>(xs: readonly T[]) => xs[Math.floor(Math.random() * xs.length)];
+    const hue = () => Math.floor(Math.random() * 360);
+    const hsl = (h: number, s: number, l: number) => {
+      const c = document.createElement("canvas").getContext("2d");
+      if (!c) return "#ffffff";
+      c.fillStyle = `hsl(${h} ${s}% ${l}%)`;
+      return c.fillStyle; // normalised to #rrggbb
+    };
+    const p = pick(PRESETS);
+    const h = hue();
+    setPreset("custom");
+    setStyle({
+      ...p.style,
+      fill: hsl(h, 90, 60),
+      fill2: Math.random() < 0.5 ? hsl(h, 90, 60) : hsl((h + 40 + hue() / 4) % 360, 90, 55),
+      stroke: p.style.stroke ? hsl(h, 60, 12) : "",
+      stroke2: "",
+      bg: p.style.transparent ? p.style.bg : hsl((h + 180) % 360, 70, 30),
+    });
+    setFace(pick(FACE_IDS));
+  };
+
+  useAutoRun(go, [text, format, style, lineMode, size, anims, face], fontReady);
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -383,6 +410,10 @@ function Body({
               {p.label}
             </Button>
           ))}
+          <Button type="button" size="sm" variant="outline" onClick={randomize}>
+            <Shuffle className="size-3.5" aria-hidden="true" />
+            randomize
+          </Button>
         </div>
       </fieldset>
 
@@ -456,13 +487,8 @@ function Body({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <Label htmlFor="te-font">typeface</Label>
-          <Select
-            id="te-font"
-            value={style.brush ? "brush" : "sans"}
-            onChange={(e) => setStyle((s) => ({ ...s, brush: e.target.value === "brush" }))}
-          >
-            <option value="sans">Impact — heavy sans</option>
-            <option value="brush">Knewave — hand-drawn brush</option>
+          <Select id="te-font" value={face} onChange={(e) => setFace(e.target.value as FaceId)}>
+            {faceOptions("luckiest")}
           </Select>
         </div>
         <div>

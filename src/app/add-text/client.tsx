@@ -4,6 +4,7 @@ import { ColorField, Input, Label, Range, Select } from "@/components/ui/field";
 import { ToolShell, useAutoRun, useRun, type ToolBodyProps } from "@/components/tool-shell";
 import { encodeGif } from "@/lib/engines/gif-encode";
 import { MAX_FRAMES, useFrames } from "@/lib/preview";
+import { FACES, faceOptions, useFace, type FaceId } from "@/lib/fonts";
 import { getTool } from "@/lib/tools";
 
 const tool = getTool("add-text");
@@ -19,9 +20,10 @@ interface Style {
   outlineWidth: number;
   mode: Mode;
   barColor: string;
+  face: FaceId;
 }
 
-const font = (size: number) => `bold ${size}px Impact, "Arial Black", sans-serif`;
+const font = (size: number, face: FaceId) => `bold ${size}px ${FACES[face].family}`;
 
 /** Greedy word wrap; a single over-long word is left on its own line. */
 function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
@@ -48,7 +50,7 @@ function compose(canvas: HTMLCanvasElement, img: HTMLImageElement, s: Style) {
   const h = img.naturalHeight || 1;
   const measure = canvas.getContext("2d", { willReadFrequently: true });
   if (!measure) throw new Error("Your browser would not give us a 2D canvas context.");
-  measure.font = font(s.fontSize);
+  measure.font = font(s.fontSize, s.face);
 
   const pad = Math.round(s.fontSize * 0.35);
   const lineHeight = s.fontSize * 1.15;
@@ -70,7 +72,7 @@ function compose(canvas: HTMLCanvasElement, img: HTMLImageElement, s: Style) {
   }
   ctx.drawImage(img, 0, topBar, w, h);
 
-  ctx.font = font(s.fontSize);
+  ctx.font = font(s.fontSize, s.face);
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   ctx.lineJoin = "round";
@@ -110,6 +112,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
     outlineWidth: 3,
     mode: "overlay",
     barColor: "#ffffff",
+    face: "impact",
   });
   const set = <K extends keyof Style>(k: K, v: Style[K]) =>
     setStyle((prev) => ({ ...prev, [k]: v }));
@@ -133,7 +136,8 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
       });
     });
 
-  useAutoRun(go, [frames, frameDelay, style], frames.length > 0 && !reading);
+  const fontReady = useFace(style.face);
+  useAutoRun(go, [frames, frameDelay, style], frames.length > 0 && !reading && fontReady);
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -158,6 +162,16 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
           >
             <option value="overlay">overlay — text sits on the image</option>
             <option value="bar">caption bar — solid bar above/below</option>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="at-font">typeface</Label>
+          <Select
+            id="at-font"
+            value={style.face}
+            onChange={(e) => set("face", e.target.value as FaceId)}
+          >
+            {faceOptions("impact")}
           </Select>
         </div>
         <Range
