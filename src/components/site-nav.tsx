@@ -2,11 +2,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { Github, Menu, X } from "lucide-react";
 import { CATEGORIES, TOOLS, type ToolCategory } from "@/lib/tools";
 import { ThemeToggle } from "@/components/theme";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+const REPO = "https://github.com/statico/gif-tools";
 
 const CATEGORY_ORDER: ToolCategory[] = ["convert", "edit", "optimize", "emoji"];
 
@@ -52,6 +54,11 @@ export function SiteNav() {
         </div>
 
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" asChild>
+            <a href={REPO} aria-label="Source on GitHub" title="Source on GitHub">
+              <Github aria-hidden="true" />
+            </a>
+          </Button>
           <ThemeToggle />
           <Button
             variant="ghost"
@@ -117,6 +124,10 @@ export function SiteFooter() {
             as an RSC route and 404. */}
         <a href="/sitemap.md" className="hover:text-foreground underline underline-offset-2">
           Sitemap
+        </a>
+        {" · "}
+        <a href={REPO} className="hover:text-foreground underline underline-offset-2">
+          Source on GitHub
         </a>
       </p>
     </footer>
