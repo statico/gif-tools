@@ -2,7 +2,8 @@
 import * as React from "react";
 import { ColorField, Label, Range, Select } from "@/components/ui/field";
 import { ToolShell, useAutoRun, useRun, type ToolBodyProps } from "@/components/tool-shell";
-import { encodeGif, loadImage, renderFrames } from "@/lib/engines/gif-encode";
+import { encodeGif, renderFrames } from "@/lib/engines/gif-encode";
+import { frameAt, outFrames, useFrames } from "@/lib/preview";
 import { getTool } from "@/lib/tools";
 import { hslToRgb, rgbToHsl } from "@/lib/color";
 
@@ -113,7 +114,10 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   const [from, setFrom] = React.useState("#ff2d95");
   const [to, setTo] = React.useState("#00e5ff");
   const [bg, setBg] = React.useState(""); // "" = transparent
-  const [img, setImg] = React.useState<HTMLImageElement | null>(null);
+  const anim = useFrames(file, setError, setProgress);
+  const img = anim.frames[0] ?? null;
+  // Animated sources: enough output frames to play the whole source loop.
+  const count = outFrames(anim, frames, delay);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
 
   const settings: Settings = {
@@ -127,23 +131,6 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
     to,
     bg: bg || null,
   };
-
-  React.useEffect(() => {
-    // Clear first, always: a new pick that fails to decode used to leave the
-    // previous image on the canvas, and `go()` would then encode that one under
-    // the new file's name.
-    setImg(null);
-    if (!file) return;
-    let live = true;
-    loadImage(file)
-      .then((i) => live && setImg(i))
-      .catch(
-        () => live && setError("That file could not be decoded. Try a PNG, JPEG, GIF or WebP."),
-      );
-    return () => {
-      live = false;
-    };
-  }, [file, setError]);
 
   React.useEffect(() => {
     const canvas = canvasRef.current;
@@ -160,7 +147,8 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
     let raf = 0;
     const start = performance.now();
     const tick = (now: number) => {
-      drawFrame(ctx, img, Math.floor(((now - start) / delay) % frames), settings);
+      const i = Math.floor(((now - start) / delay) % count);
+      drawFrame(ctx, frameAt(anim, i * delay), i % frames, settings);
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -170,22 +158,21 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
 
   const go = () =>
     run("Partying", async () => {
-      if (!file) throw new Error("Choose an image first.");
-      const source = img ?? (await loadImage(file));
+      if (!img) throw new Error("Choose an image first.");
       setProgress(0.4);
-      const data = renderFrames({ width: size, height: size }, frames, (ctx, _t, i) =>
-        drawFrame(ctx, source, i, settings),
+      const data = renderFrames({ width: size, height: size }, count, (ctx, _t, i) =>
+        drawFrame(ctx, frameAt(anim, i * delay), i % frames, settings),
       );
       setProgress(0.8);
       publish({
         data: encodeGif(data, { delayMs: delay, transparent: !bg }),
         ext: "gif",
-        note: `${size}px · ${frames}f · ${delay}ms · ${palette} · ${mode}`,
+        note: `${size}px · ${count}f · ${delay}ms · ${palette} · ${mode}`,
       });
       setProgress(1);
     });
 
-  useAutoRun(go, [file, size, frames, delay, palette, mode, threshold, from, to, img], !!file);
+  useAutoRun(go, [file, size, frames, delay, palette, mode, threshold, from, to, img], !!img);
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2">
