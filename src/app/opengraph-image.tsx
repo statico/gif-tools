@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { readFile } from "node:fs/promises";
 import { SITE } from "@/lib/site";
 import { TOOLS } from "@/lib/tools";
 
@@ -9,7 +10,9 @@ export const dynamic = "force-static";
 export const alt = SITE.title;
 
 // Rendered once at build time and emitted as a static PNG by the export.
-export default function OpengraphImage() {
+export default async function OpengraphImage() {
+  // VCR OSD Mono, freeware by Riciery Leal. Read from disk at build time.
+  const vcr = await readFile(new URL("./vcr-osd-mono.ttf", import.meta.url));
   return new ImageResponse(
     <div
       style={{
@@ -20,7 +23,7 @@ export default function OpengraphImage() {
         justifyContent: "space-between",
         background: "#1a1e24",
         color: "#d8dee9",
-        fontFamily: "monospace",
+        fontFamily: "VCR OSD Mono",
         padding: 64,
         borderTop: "12px solid #88c0d0",
       }}
@@ -43,6 +46,6 @@ export default function OpengraphImage() {
         <div style={{ fontSize: 34, color: "#eceff4", letterSpacing: 2 }}>{SITE.name}</div>
       </div>
     </div>,
-    size,
+    { ...size, fonts: [{ name: "VCR OSD Mono", data: vcr, weight: 400, style: "normal" }] },
   );
 }
