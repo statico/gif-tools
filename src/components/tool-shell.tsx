@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/field";
 import { HistoryPicker } from "@/components/history-picker";
-import { ToolStrip, type Carry } from "@/components/tool-strip";
+import { usePublishCarry, type Carry } from "@/components/tool-strip";
 import { download, mimeFor } from "@/lib/download";
 import { addToHistory, takeHandoff } from "@/lib/history";
 import { formatBytes, slugify } from "@/lib/utils";
@@ -166,27 +166,31 @@ export function ToolShell({
   }, [requiresFile, onPick]);
 
   const resultMime = result ? (result.mime ?? mimeFor(`x.${result.ext}`)) : null;
-  const carry: Carry | null = result
-    ? {
-        file: new File(
-          [result.data.slice().buffer as ArrayBuffer],
-          `${slugify(name, tool.slug)}.${result.ext}`,
-          {
-            type: resultMime ?? "application/octet-stream",
-          },
-        ),
-        kind: "result",
-        url: resultMime?.startsWith("image/") ? previewUrl : null,
-      }
-    : file
-      ? { file, kind: "source", url: file.type.startsWith("image/") ? sourceUrl : null }
-      : null;
+  const carry = React.useMemo<Carry | null>(
+    () =>
+      result
+        ? {
+            file: new File(
+              [result.data.slice().buffer as ArrayBuffer],
+              `${slugify(name, tool.slug)}.${result.ext}`,
+              {
+                type: resultMime ?? "application/octet-stream",
+              },
+            ),
+            kind: "result",
+            url: resultMime?.startsWith("image/") ? previewUrl : null,
+          }
+        : file
+          ? { file, kind: "source", url: file.type.startsWith("image/") ? sourceUrl : null }
+          : null,
+    [result, resultMime, name, tool.slug, previewUrl, file, sourceUrl],
+  );
+  usePublishCarry(carry);
   const sourceSize = useMediaSize(sourceUrl, file?.type ?? null);
   const resultSize = useMediaSize(previewUrl, resultMime);
 
   return (
     <>
-      <ToolStrip current={tool.slug} carry={carry} />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] items-start">
         <div className="grid gap-4 min-w-0">
           {requiresFile ? (
