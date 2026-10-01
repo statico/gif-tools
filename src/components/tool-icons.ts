@@ -9,6 +9,7 @@ import {
   Hash,
   ImageDown,
   Images,
+  Megaphone,
   type LucideIcon,
   MessageSquareText,
   PartyPopper,
@@ -45,5 +46,6 @@ export const TOOL_ICONS: Record<string, LucideIcon> = {
   party: PartyPopper,
   emojify: Smile,
   number: Hash,
+  "old-man-yells": Megaphone,
   "text-emoji": MessageSquareText,
 };
