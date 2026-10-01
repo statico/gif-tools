@@ -54,7 +54,7 @@ function Body({ file, setBusy, setProgress, setError, publish }: ToolBodyProps) 
   const run = useRun({ setBusy, setError, setProgress });
   const [size, setSize] = React.useState(128);
   const [logo, setLogo] = React.useState(38);
-  const [shake, setShake] = React.useState(true);
+  const [shake, setShake] = React.useState(false);
   const [abe, setAbe] = React.useState<HTMLImageElement | null>(null);
   const anim = useFrames(file, setError, setProgress);
   const img = anim.frames[0] ?? null;
