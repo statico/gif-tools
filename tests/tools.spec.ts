@@ -178,3 +178,15 @@ test("italic text is centred on its ink, not its advance width", async ({ page }
   expect(gaps.right).toBeGreaterThan(1);
   expect(Math.abs(gaps.left - gaps.right)).toBeLessThanOrEqual(2);
 });
+
+test("old-man-yells composites a logo into a transparent GIF", async ({ page }) => {
+  await page.goto("/old-man-yells/");
+  await page.setInputFiles(
+    "#old-man-yells-file",
+    path.join(import.meta.dirname, "fixtures/alpha.png"),
+  );
+  const download = page.getByRole("button", { name: /^download/i });
+  await expect(download).toBeEnabled({ timeout: 60_000 });
+  const [saved] = await Promise.all([page.waitForEvent("download"), download.click()]);
+  expect(saved.suggestedFilename()).toBe("old-man-yells-at.gif");
+});
