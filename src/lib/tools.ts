@@ -261,6 +261,17 @@ export const TOOLS: Tool[] = [
     keywords: ["slack emoji generator", "animated emoji", "spin emoji", "bounce emoji"],
   },
   {
+    slug: "old-man-yells",
+    name: "Old Man Yells At",
+    title: "Old man yells at X — Slack emoji generator",
+    description:
+      'Make an "old man yells at" Slack emoji: drop in any logo and Grandpa Simpson shakes his fist at it. Transparent background, 128px, static PNG or animated GIF.',
+    blurb: "Grandpa Simpson shaking his fist at any logo.",
+    category: "emoji",
+    engine: ["canvas"],
+    keywords: ["old man yells at", "old man yells at cloud", "abe simpson emoji", "slack emoji"],
+  },
+  {
     slug: "number",
     name: "Number",
     title: "100-style number emoji generator",
