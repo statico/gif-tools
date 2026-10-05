@@ -272,6 +272,17 @@ export const TOOLS: Tool[] = [
     keywords: ["old man yells at", "old man yells at cloud", "abe simpson emoji", "slack emoji"],
   },
   {
+    slug: "on-fire",
+    name: "On Fire",
+    title: "On fire emoji generator — set any image ablaze",
+    description:
+      "Put any image on fire: animated cartoon flames rise up behind it, and optionally in front. Transparent background, 128px Slack emoji, animated GIF or static PNG.",
+    blurb: "Any image, engulfed in animated flames.",
+    category: "emoji",
+    engine: ["canvas"],
+    keywords: ["on fire emoji", "fire gif", "flames emoji", "this is fine", "slack emoji"],
+  },
+  {
     slug: "number",
     name: "Number",
     title: "100-style number emoji generator",
