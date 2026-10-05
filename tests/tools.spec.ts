@@ -190,3 +190,12 @@ test("old-man-yells composites a logo into a transparent GIF", async ({ page }) 
   const [saved] = await Promise.all([page.waitForEvent("download"), download.click()]);
   expect(saved.suggestedFilename()).toBe("old-man-yells-at.gif");
 });
+
+test("on-fire composites an image over animated flames", async ({ page }) => {
+  await page.goto("/on-fire/");
+  await page.setInputFiles("#on-fire-file", path.join(import.meta.dirname, "fixtures/alpha.png"));
+  const download = page.getByRole("button", { name: /^download/i });
+  await expect(download).toBeEnabled({ timeout: 60_000 });
+  const [saved] = await Promise.all([page.waitForEvent("download"), download.click()]);
+  expect(saved.suggestedFilename()).toBe("on-fire.gif");
+});

@@ -4,6 +4,7 @@ import {
   Crop,
   Eraser,
   Film,
+  Flame,
   Gauge,
   Grid2x2,
   Hash,
@@ -47,5 +48,6 @@ export const TOOL_ICONS: Record<string, LucideIcon> = {
   emojify: Smile,
   number: Hash,
   "old-man-yells": Megaphone,
+  "on-fire": Flame,
   "text-emoji": MessageSquareText,
 };
