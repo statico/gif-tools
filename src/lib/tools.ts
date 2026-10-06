@@ -276,7 +276,7 @@ export const TOOLS: Tool[] = [
     name: "On Fire",
     title: "On fire emoji generator — set any image ablaze",
     description:
-      "Put any image on fire: animated cartoon flames rise up behind it, and optionally in front. Transparent background, 128px Slack emoji, animated GIF or static PNG.",
+      "Put any image on fire: the classic animated fire emoji burns behind it, and optionally in front. Transparent background, 128px Slack emoji, animated GIF or static PNG.",
     blurb: "Any image, engulfed in animated flames.",
     category: "emoji",
     engine: ["canvas"],
