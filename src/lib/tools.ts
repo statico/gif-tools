@@ -190,6 +190,17 @@ export const TOOLS: Tool[] = [
     keywords: ["gif effects", "gif filter", "grayscale gif"],
   },
   {
+    slug: "tint",
+    name: "Tint & Colorize",
+    title: "Tint, colorize and recolor a GIF or image",
+    description:
+      "Hue shift, colour tint, colorize, duotone or film filters like Leica Monochrom, teal and orange and cross process, on an animated GIF, image or video.",
+    blurb: "Hue shift, tint, duotone and Leica-style filters.",
+    category: "edit",
+    engine: ["ffmpeg"],
+    keywords: ["tint gif", "colorize gif", "recolor gif", "hue shift", "duotone", "leica filter"],
+  },
+  {
     slug: "remove-bg",
     name: "Remove Background",
     title: "Remove a background colour from a GIF or image",

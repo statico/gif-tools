@@ -199,3 +199,14 @@ test("on-fire composites an image over animated flames", async ({ page }) => {
   const [saved] = await Promise.all([page.waitForEvent("download"), download.click()]);
   expect(saved.suggestedFilename()).toBe("on-fire.gif");
 });
+
+test("tint applies a Leica Monochrom curve to a GIF", async ({ page }) => {
+  await page.goto("/tint/");
+  await page.setInputFiles("#tint-file", GIF);
+  await page.getByRole("button", { name: "Filters" }).click();
+  await page.getByRole("button", { name: "Leica Monochrom" }).click();
+  const download = page.getByRole("button", { name: /^download/i });
+  await expect(download).toBeEnabled({ timeout: 120_000 });
+  const [saved] = await Promise.all([page.waitForEvent("download"), download.click()]);
+  expect(saved.suggestedFilename()).toBe("tint.gif");
+});
