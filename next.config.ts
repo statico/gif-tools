@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
   images: { unoptimized: true },
   // wasm tools need these off the critical path; nothing here is server-rendered
   reactStrictMode: true,
+  // Stop `next dev` appending its own block to AGENTS.md.
+  agentRules: false,
 };
 
 export default nextConfig;
