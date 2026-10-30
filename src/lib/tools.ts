@@ -309,11 +309,18 @@ export const TOOLS: Tool[] = [
     name: "Text Emoji",
     title: "Square text emoji generator for Slack",
     description:
-      'Turn short phrases like "yes", "nope" or "hell yeah" into square, legible Slack emoji. Auto-wraps onto multiple lines and ships a range of ready-made styles.',
-    blurb: '"hell yeah" as a square, readable 128px emoji.',
+      'Turn phrases like "hell yeah" into square Slack emoji: one stacked emoji, a row of tiles that spell it out, or a scrolling marquee GIF, with wave and shine effects.',
+    blurb: '"hell yeah" as one emoji, a row of tiles or a marquee.',
     category: "emoji",
     engine: ["canvas"],
-    keywords: ["text emoji generator", "slack text emoji", "square emoji", "word emoji"],
+    keywords: [
+      "text emoji generator",
+      "slack text emoji",
+      "square emoji",
+      "word emoji",
+      "multi emoji banner",
+      "marquee gif",
+    ],
   },
 ];
 

@@ -210,3 +210,19 @@ test("tint applies a Leica Monochrom curve to a GIF", async ({ page }) => {
   const [saved] = await Promise.all([page.waitForEvent("download"), download.click()]);
   expect(saved.suggestedFilename()).toBe("tint.gif");
 });
+
+test("text-emoji tiles cut one banner into a zip of numbered emoji", async ({ page }) => {
+  await page.goto("/text-emoji/");
+  await page.fill("#te-text", "winning!");
+  await page.selectOption("#te-layout", "tiles");
+  await page.selectOption("#te-tiles", "3");
+  await expect(page.getByRole("img", { name: "Tile 3 of 3" })).toBeVisible({ timeout: 30_000 });
+
+  const [saved] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: /^download/i }).click(),
+  ]);
+  const { unzipSync } = await import("fflate");
+  const names = Object.keys(unzipSync(await fs.readFile(await saved.path())));
+  expect(names).toEqual(["winning-1.png", "winning-2.png", "winning-3.png"]);
+});
