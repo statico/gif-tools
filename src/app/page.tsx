@@ -5,7 +5,7 @@ import { CATEGORIES, TOOLS, type ToolCategory } from "@/lib/tools";
 import { JsonLd } from "@/lib/seo";
 import { SITE } from "@/lib/site";
 
-const ORDER: ToolCategory[] = ["convert", "edit", "optimize", "emoji"];
+const ORDER: ToolCategory[] = ["emoji", "convert", "edit", "optimize"];
 
 export default function Home() {
   return (

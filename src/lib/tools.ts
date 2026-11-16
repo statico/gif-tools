@@ -91,6 +91,17 @@ export const TOOLS: Tool[] = [
     keywords: ["gif to webp", "webp to gif", "apng", "image converter"],
   },
   {
+    slug: "gif-apng",
+    name: "GIF ⇄ APNG",
+    title: "GIF to APNG and APNG to GIF converter",
+    description:
+      "Convert an animated GIF to APNG, or an animated PNG back to GIF, keeping frame timing and looping. Palette-tuned GIF output. Runs locally with ffmpeg in wasm.",
+    blurb: "Animated GIF ⇄ animated PNG, timing kept.",
+    category: "convert",
+    engine: ["ffmpeg"],
+    keywords: ["gif to apng", "apng to gif", "animated png", "apng converter"],
+  },
+  {
     slug: "split",
     name: "Split",
     title: "GIF splitter — export every frame",

@@ -226,3 +226,25 @@ test("text-emoji tiles cut one banner into a zip of numbered emoji", async ({ pa
   const names = Object.keys(unzipSync(await fs.readFile(await saved.path())));
   expect(names).toEqual(["winning-1.png", "winning-2.png", "winning-3.png"]);
 });
+
+test("gif-apng round-trips GIF → APNG → GIF", async ({ page }) => {
+  await page.goto("/gif-apng/");
+  await page.setInputFiles("input[type=file]", GIF);
+  const download = page.getByRole("button", { name: /^download/i });
+  await expect(download).toBeEnabled({ timeout: 150_000 });
+  const [apng] = await Promise.all([page.waitForEvent("download"), download.click()]);
+  const bytes = await fs.readFile(await apng.path());
+  // PNG signature plus an acTL chunk means it really is animated.
+  expect(bytes.subarray(1, 4).toString()).toBe("PNG");
+  expect(bytes.includes(Buffer.from("acTL"))).toBe(true);
+
+  await page.setInputFiles("input[type=file]", {
+    name: "anim.png",
+    mimeType: "image/png",
+    buffer: bytes,
+  });
+  await expect(page.getByText("APNG → GIF")).toBeVisible();
+  await expect(download).toBeEnabled({ timeout: 150_000 });
+  const [gif] = await Promise.all([page.waitForEvent("download"), download.click()]);
+  expect((await fs.readFile(await gif.path())).subarray(0, 3).toString()).toBe("GIF");
+});

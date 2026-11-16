@@ -1,5 +1,6 @@
 import {
   ArrowLeftRight,
+  ArrowRightLeft,
   Clapperboard,
   Crop,
   Eraser,
@@ -32,6 +33,7 @@ export const TOOL_ICONS: Record<string, LucideIcon> = {
   "gif-to-video": Clapperboard,
   "gif-maker": Images,
   convert: ArrowLeftRight,
+  "gif-apng": ArrowRightLeft,
   split: Grid2x2,
   resize: Scaling,
   crop: Crop,
